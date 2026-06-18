@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GeckoFarm Export Tool</title>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+</head>
+
+<body style="font-family: Arial; padding: 20px;">
+
+<h2>🔥 GeckoFarm Firestore Export Tool</h2>
+
+<button onclick="login()">1. Login Google</button>
+<button onclick="exportData()">2. Export Data</button>
+
+<pre id="log" style="background:#111;color:#0f0;padding:10px;margin-top:20px;height:400px;overflow:auto;"></pre>
+
+<script>
+const logBox = document.getElementById('log');
+
+function log(msg) {
+  logBox.innerText += msg + "\n";
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+/* ================= FIREBASE ================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyD5SLcjVH6ZzOQ0RVnOdF4uXxJgBdXdfgo",
+  authDomain: "gen-lang-client-0198477376.firebaseapp.com",
+  projectId: "gen-lang-client-0198477376",
+  storageBucket: "gen-lang-client-0198477376.firebasestorage.app",
+  messagingSenderId: "21737192460",
+  appId: "1:21737192460:web:30d73b69c0c2df23d68229"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* ================= LOGIN ================= */
+async function login() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    log("🔐 Opening login...");
+
+    const result = await auth.signInWithPopup(provider);
+
+    log("✅ Login success: " + result.user.email);
+
+  } catch (e) {
+    log("❌ LOGIN ERROR: " + e.code + " - " + e.message);
+  }
+}
+
+/* ================= EXPORT COLLECTION ================= */
+async function exportCollection(name) {
+  try {
+    log("📁 Exporting " + name);
+
+    const snap = await db.collection(name).get();
+
+    const data = {};
+    snap.forEach(doc => {
+      data[doc.id] = doc.data();
+    });
+
+    log("   ✅ " + name + ": " + snap.size + " docs");
+    return data;
+
+  } catch (e) {
+    log("   ❌ " + name + " failed: " + e.message);
+    return {};
+  }
+}
+
+/* ================= EXPORT ALL ================= */
+async function exportData() {
+  try {
+    log("📦 Starting export...");
+
+    const collections = [
+      "users",
+      "geckos",
+      "pairings",
+      "clutches",
+      "morphs",
+      "morph_relations"
+    ];
+
+    const backup = {};
+
+    for (const col of collections) {
+      backup[col] = await exportCollection(col);
+    }
+
+    const blob = new Blob(
+      [JSON.stringify(backup, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = "firestore-backup.json";
+    a.click();
+
+    log("✅ EXPORT FINISHED");
+
+  } catch (e) {
+    log("❌ ERROR: " + e.message);
+  }
+}
+</script>
+
+</body>
+</html>

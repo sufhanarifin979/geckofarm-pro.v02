@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'sufhan.arifin979@gmail.com';
+    }
+
+    // --- USER PROFILE RULES ---
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId 
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['subscription', 'planLimit', 'uid', 'email']);
+      allow delete: if isAdmin();
+    }
+
+    // --- GECKO RULES & SUBCOLLECTIONS ---
+    match /geckos/{geckoId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid 
+        && request.resource.data.name.size() < 100
+        && geckoId.size() < 128;
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid 
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+
+      // Nested subcollections
+      match /weight_history/{weightId} {
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/geckos/$(geckoId)).data.ownerId == request.auth.uid;
+      }
+
+      match /activity_logs/{logId} {
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/geckos/$(geckoId)).data.ownerId == request.auth.uid;
+      }
+    }
+
+    // --- BREEDING PAIRINGS ---
+    match /pairings/{pairingId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // --- BREEDING CLUTCHES ---
+    match /clutches/{clutchId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // --- MORPH ENCYCLOPEDIA ---
+    match /morphs/{morphId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /morph_relations/{relationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
