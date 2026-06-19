@@ -41,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const ai = getAiClient(apiKey);
 
     const response = await ai.models.generateContent({ 
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         systemInstruction: `Anda adalah pakar genetika reptil profesional (Herpticulture Geneticist) yang berspesialisasi dalam Leopard Gecko.
@@ -74,22 +74,16 @@ PANDUAN GAYA:
     const text = response.text || "Tidak dapat menghasilkan analisis saat ini.";
     return res.status(200).json({ text });
   } catch (error: any) {
-    console.error("[Serverless] Gemini Error:", error);
-    
-    const errorStr = (error?.message || JSON.stringify(error) || '').toLowerCase();
-    const isExpiredOrInvalid = errorStr.includes('expired') || errorStr.includes('invalid') || errorStr.includes('api_key_invalid') || error?.status === 400;
-    
-    if (isExpiredOrInvalid) {
-      return res.status(400).json({ 
-        error: "API Key Gemini Anda tidak valid atau telah kedaluwarsa. Silakan segarkan halaman dan perbarui/ganti API Key melalui menu Settings > Secrets (atau hubungkan kembali kunci API Anda) untuk melanjutkan." 
-      });
-    }
 
-    const statusCode = error?.status || 500;
-    const message = statusCode === 429 
-      ? "Batas tingkat permintaan tercapai (Rate-limited). Silakan coba lagi dalam beberapa menit." 
-      : "Gagal melakukan analisis AI. Silakan coba lagi nanti.";
-    
-    return res.status(statusCode).json({ error: message });
-  }
+  console.error("================================");
+  console.error("FULL GEMINI ERROR");
+  console.error("STATUS:", error?.status);
+  console.error("MESSAGE:", error?.message);
+  console.error("ERROR OBJECT:");
+  console.error(JSON.stringify(error, null, 2));
+  console.error("================================");
+
+  return res.status(error?.status || 500).json({
+    error: error?.message || "Unknown Error"
+  });
 }
