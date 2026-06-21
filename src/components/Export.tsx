@@ -867,7 +867,7 @@ export default function Export({ profile }: ExportProps) {
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Database Backup</h2>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button 
             onClick={exportToExcel}
             className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group flex items-center gap-5 text-left active:scale-[0.98]"
@@ -894,20 +894,6 @@ export default function Export({ profile }: ExportProps) {
               <p className="text-slate-400 text-[10px] font-medium leading-tight">Laporan koleksi format PDF.</p>
             </div>
             <Download className="w-4 h-4 text-slate-300 group-hover:text-red-500 transition-colors" />
-          </button>
-
-          <button 
-            onClick={runBackupExport}
-            className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group flex items-center gap-5 text-left active:scale-[0.98]"
-          >
-            <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shrink-0 group-hover:scale-110 transition-transform">
-              <Database className="w-6 h-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Cloud Backup</h3>
-              <p className="text-slate-400 text-[10px] font-medium leading-tight">Cadangan Firestore format JSON.</p>
-            </div>
-            <Download className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
           </button>
         </div>
       </section>
