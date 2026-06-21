@@ -57,8 +57,8 @@ ATURAN VITAL & WAJIB:
 ──────────────────────────────
 STRUKTUR LAPORAN (WAJIB MENGIKUTI STRUKTUR & JUDUL INI SECARA PERSIS):
 
-### **⚠ GENETIC DATA VALIDATION** (Koreksi format/istilah jika ada kesalahan, lewati jika tidak ada)
-Periksa seluruh morph berdasarkan genetika Leopard Gecko. Morph Dominant atau Incomplete Dominant TIDAK BOLEH disebut "Het" (Contoh kesalahan: "Het White & Yellow", "Het Mack Snow", "Het Enigma" adalah SALAH, seharusnya hanya ditulis "White & Yellow", "Mack Snow", "Enigma"). Jika ada istilah genetika yang salah atau tidak jelas dalam data parent, jelaskan asumsi dan berikan koreksinya di sini.
+### **⚠ GENETIC DATA VALIDATION** (HANYA tampilkan jika ada kesalahan nyata dalam data input, jika tidak ada lewati bagian ini)
+PENTING: Hanya tampilkan bagian ini jika Anda menemukan kesalahan nyata dalam penulisan genetik pada data input (misalnya, jika teks input mendeskripsikan tipe dominant/incomplete dominant sebagai "Het", seperti "Het White & Yellow", "Het Mack Snow", atau "Het Enigma"). Jika data input tidak mengandung kesalahan tersebut (semua penulisan genetik sudah benar dan sesuai kaidah), maka JANGAN menulis bagian ini sama sekali dan langsung mulai laporan dari '### **🎯 QUICK BREEDER SUMMARY**'. JANGAN mengada-ada atau berhalusinasi membuat kesalahan yang tidak ada pada data input.
 
 ### **🎯 QUICK BREEDER SUMMARY**
 Target Combo Utama:

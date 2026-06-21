@@ -19,6 +19,7 @@ import AdminPanel from './components/AdminPanel';
 import Auth from './components/Auth';
 import PublicProfile from './components/PublicProfile';
 import { GeckoProvider } from './GeckoProvider';
+import MigrationBanner from './components/MigrationBanner';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { APP_LOGO_URL } from './constants';
@@ -301,6 +302,8 @@ export default function App() {
                   onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
                   onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
                 />
+                
+                <MigrationBanner />
                 
                 {quotaWarning && (
                   isAdmin ? (
