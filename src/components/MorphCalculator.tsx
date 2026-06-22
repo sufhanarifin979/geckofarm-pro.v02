@@ -18,7 +18,9 @@ import {
   Plus,
   ShieldAlert,
   Target,
-  Clock
+  Clock,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -83,8 +85,19 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'prob' | 'ai' | null>(null);
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
 
   const aiLockRef = useRef(false);
+
+  // Copy analysis text to clipboard
+  const handleCopyAnalysis = () => {
+    if (!aiAnalysis) return;
+    navigator.clipboard.writeText(aiAnalysis);
+    setIsCopied(true);
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  };
 
   // Determistic Genetic Key for Caching
   const getGeneticKey = (s: GeneticState, d: GeneticState) => {
@@ -236,8 +249,20 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
     aiLockRef.current = true;
 
     const formatParent = (p: GeneticState) => {
-      const v = p.visual.map(id => ALL_GENES[id]?.name).join(', ') || 'None';
-      const h = p.hets.map(id => `Het ${ALL_GENES[id]?.name}`).join(', ') || 'None';
+      const visuals = [...p.visual];
+      const hets: string[] = [];
+      
+      p.hets.forEach(id => {
+        const gene = ALL_GENES[id];
+        if (gene?.type === 'dominant' || gene?.type === 'codominant' || gene?.type === 'special') {
+          visuals.push(id);
+        } else {
+          hets.push(id);
+        }
+      });
+
+      const v = visuals.map(id => ALL_GENES[id]?.name).join(', ') || 'None';
+      const h = hets.map(id => `Het ${ALL_GENES[id]?.name}`).join(', ') || 'None';
       const t = p.visualTraits.map(id => (p.traitLevels?.[id] ? `${p.traitLevels[id]} ` : '') + (VISUAL_TRAITS[id]?.name || id)).join(', ') || 'None';
       const pt = p.patternTraits.map(id => (p.traitLevels?.[id] ? `${p.traitLevels[id]} ` : '') + (PATTERN_TRAITS[id]?.name || id)).join(', ') || 'None';
       return `Visual: ${v}, Hets: ${h}, Traits: ${t}, Patterns: ${pt}`;
@@ -446,12 +471,37 @@ Probabilitas Genetik: ${resultsContext}`;
                     <p className="text-[10px] font-bold text-emerald-500/70 uppercase tracking-[0.2em] mt-1">Breeder-Grade Intelligence Report</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setActiveTab(null)}
-                  className="p-3 bg-white/5 hover:bg-rose-500/20 text-white/30 hover:text-rose-400 rounded-2xl transition-all border border-white/5"
-                >
-                  <Trash2 size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={handleCopyAnalysis}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-3 rounded-2xl transition-all border text-xs font-black uppercase tracking-wider",
+                      isCopied 
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/35" 
+                        : "bg-white/5 text-white/70 hover:text-white hover:bg-white/10 border-white/5"
+                    )}
+                    title="Copy Report"
+                  >
+                    {isCopied ? (
+                      <>
+                        <Check size={16} className="text-emerald-400" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab(null)}
+                    className="p-3 bg-white/5 hover:bg-rose-500/20 text-white/30 hover:text-rose-400 rounded-2xl transition-all border border-white/5"
+                    title="Hapus"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
               
               <div className="prose prose-invert prose-emerald max-w-none text-slate-300 relative z-10">

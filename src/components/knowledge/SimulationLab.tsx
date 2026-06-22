@@ -224,8 +224,18 @@ export default function SimulationLab({ profile }: { profile: UserProfile | null
 
   const handleShare = async () => {
     const formatParent = (p: ParentState) => {
-      const v = p.visual.map(id => ALL_GENES[id]?.name).join(', ') || 'None';
-      const h = p.hets.map(id => `Het ${ALL_GENES[id]?.name}`).join(', ') || 'None';
+      const visuals = [...p.visual];
+      const hets: string[] = [];
+      p.hets.forEach(id => {
+        const gene = ALL_GENES[id];
+        if (gene?.type === 'dominant' || gene?.type === 'codominant' || gene?.type === 'special') {
+          visuals.push(id);
+        } else {
+          hets.push(id);
+        }
+      });
+      const v = visuals.map(id => ALL_GENES[id]?.name).join(', ') || 'None';
+      const h = hets.map(id => `Het ${ALL_GENES[id]?.name}`).join(', ') || 'None';
       return `Visual: ${v}, Hets: ${h}`;
     };
     const text = `Breeding Prediction: ${formatParent(parentSire)} x ${formatParent(parentDam)}\nCheck out these results on Geckofarm Pro!`;
