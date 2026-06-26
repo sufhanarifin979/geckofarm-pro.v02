@@ -49,6 +49,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const { geckos, loading, refreshData } = useGeckos();
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedGecko, setSelectedGecko] = useState<Gecko | null>(null);
@@ -86,11 +87,29 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
     damName: '',
     info: '',
     note: '',
-    photoUrl: ''
+    photoUrl: '',
+    purchasePrice: undefined
   };
 
   // Form states
   const [formData, setFormData] = useState<Partial<Gecko>>(initialFormData);
+  const [sellWorkflow, setSellWorkflow] = useState<{
+    isOpen: boolean;
+    geckoId?: string;
+    geckoName: string;
+    geckoMorph: string;
+    purchasePrice: number;
+    salePrice: string;
+    buyer: string;
+    date: string;
+    notes?: string;
+  } | null>(null);
+  const [pendingSale, setPendingSale] = useState<{
+    salePrice: number;
+    buyer: string;
+    date: string;
+    notes?: string;
+  } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [imgSrc, setImgSrc] = useState('');
@@ -263,6 +282,22 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
         batch.update(doc(db, 'geckos', geckoId!), finalData);
       }
 
+      // Automatically create a sale transaction on Finance if status is 'sold' and pendingSale is defined
+      if (formData.status === 'sold' && pendingSale) {
+        const newTransRef = doc(collection(db, 'finance_transactions'));
+        batch.set(newTransRef, {
+          userId: profile.uid,
+          type: 'sale',
+          category: 'gecko_sale',
+          amount: pendingSale.salePrice,
+          geckoId: geckoId,
+          buyer: pendingSale.buyer,
+          date: pendingSale.date,
+          notes: pendingSale.notes || '',
+          createdAt: serverTimestamp()
+        });
+      }
+
       // Commit everything in one go
       console.log('[DEBUG] Committing Firestore batch');
       await batch.commit();
@@ -306,6 +341,39 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
     setIsModalOpen(false);
     setEditingGecko(null);
     setIsUploading(false);
+    setPendingSale(null);
+  };
+
+  const handleConfirmSale = async () => {
+    if (!profile || !sellWorkflow) return;
+    const saleAmt = parseFloat(sellWorkflow.salePrice);
+    if (isNaN(saleAmt) || saleAmt < 0) {
+      addToast("Harga penjualan tidak valid.", "error");
+      return;
+    }
+
+    try {
+      setFormData(prev => ({ ...prev, status: 'sold' }));
+      setPendingSale({
+        salePrice: saleAmt,
+        buyer: sellWorkflow.buyer.trim() || '',
+        date: sellWorkflow.date,
+        notes: (sellWorkflow.notes || '').trim()
+      });
+      setSellWorkflow(null);
+      addToast("Rincian penjualan disimpan! Ingat untuk menekan tombol 'Simpan' di form utama.");
+    } catch (err: any) {
+      console.error("Error confirming sale:", err);
+      addToast("Gagal memproses rincian penjualan: " + err.message, "error");
+    }
+  };
+
+  const handleCancelSale = () => {
+    setFormData(prev => ({ 
+      ...prev, 
+      status: editingGecko?.status || 'available' 
+    }));
+    setSellWorkflow(null);
   };
 
   const handleEdit = (gecko: Gecko) => {
@@ -324,7 +392,8 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       info: gecko.info || '',
       note: gecko.note || '',
       photoUrl: gecko.photoUrl || '',
-      createdAt: gecko.createdAt
+      createdAt: gecko.createdAt,
+      purchasePrice: gecko.purchasePrice
     });
     setImgSrc(gecko.photoUrl || '');
     setIsModalOpen(true);
@@ -361,13 +430,18 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       const matchesSearch = g.name.toLowerCase().includes(q) || 
                            g.morph.toLowerCase().includes(q);
       const matchesGender = genderFilter === 'all' || g.gender === genderFilter;
-      return matchesSearch && matchesGender;
+      const statusLower = (g.status || 'available').toLowerCase();
+      const matchesStatus = statusFilter === 'all' || 
+                            (statusFilter === 'available' && statusLower === 'available') ||
+                            (statusFilter === 'holdback' && (statusLower === 'holdback' || statusLower === 'keep')) ||
+                            (statusFilter === 'sold' && statusLower === 'sold');
+      return matchesSearch && matchesGender && matchesStatus;
     });
-  }, [geckos, search, genderFilter]);
+  }, [geckos, search, genderFilter, statusFilter]);
 
   useEffect(() => {
     setDisplayLimit(4);
-  }, [search, genderFilter]);
+  }, [search, genderFilter, statusFilter]);
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500 pb-[calc(7rem+env(safe-area-inset-bottom))]">
@@ -413,6 +487,24 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
               }`}
             >
               {g}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end -mt-1 md:-mt-3">
+        <div className="flex bg-white p-1 h-14 rounded-2xl border border-slate-200 shadow-sm shrink-0 w-full md:w-auto">
+          {['all', 'available', 'holdback', 'sold'].map(st => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`flex-1 px-3 sm:px-6 h-full rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden flex items-center justify-center min-w-[70px] sm:min-w-[90px] ${
+                statusFilter === st 
+                  ? 'bg-slate-900 text-white shadow-md' 
+                  : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+              }`}
+            >
+              {st}
             </button>
           ))}
         </div>
@@ -474,10 +566,11 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight whitespace-normal">{gecko.name}</h3>
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                        gecko.status === 'available' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 
-                        gecko.status === 'keep' ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' :
-                        gecko.status === 'dead' ? 'bg-rose-500' :
-                        'bg-slate-300'
+                        gecko.status === 'keep' 
+                          ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' 
+                          : gecko.status === 'sold' 
+                          ? 'bg-slate-500 shadow-[0_0_8px_rgba(100,116,139,0.5)]' 
+                          : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
                       }`} />
                     </div>
                     <div className="flex items-center gap-1">
@@ -493,6 +586,32 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                           <BookOpen size={10} />
                         </button>
                       </Tooltip>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="mt-1.5 flex">
+                      {(() => {
+                        const s = (gecko.status || 'available').toLowerCase();
+                        if (s === 'keep' || s === 'holdback') {
+                          return (
+                            <span className="text-[8px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-full bg-blue-100/60 text-blue-800 border border-blue-200/30">
+                              Holdback
+                            </span>
+                          );
+                        } else if (s === 'sold') {
+                          return (
+                            <span className="text-[8px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/30">
+                              Sold
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span className="text-[8px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-full bg-emerald-100/60 text-emerald-800 border border-emerald-200/30">
+                              Available
+                            </span>
+                          );
+                        }
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -710,6 +829,29 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                           <div className="text-sm font-bold text-slate-700 uppercase leading-snug break-words">{selectedGecko.damName || 'N/A'}</div>
                         </div>
                       </div>
+
+                      {/* Row 3: Purchase Price & Status */}
+                      <div className="grid grid-cols-2 gap-4 pb-4 border-b border-slate-50 relative">
+                        <div className="space-y-1 pr-4 border-r border-slate-100">
+                          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Purchase Price</div>
+                          <div className="text-base font-black text-slate-800">
+                            {selectedGecko.purchasePrice ? `Rp ${selectedGecko.purchasePrice.toLocaleString('id-ID')}` : '-'}
+                          </div>
+                        </div>
+                        <div className="space-y-1 pl-4">
+                          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Status</div>
+                          {(() => {
+                            const s = (selectedGecko.status || 'available').toLowerCase();
+                            if (s === 'keep' || s === 'holdback') {
+                              return <div className="text-base font-black text-blue-600">Holdback</div>;
+                            } else if (s === 'sold') {
+                              return <div className="text-base font-black text-slate-500">Sold</div>;
+                            } else {
+                              return <div className="text-base font-black text-emerald-600">Available</div>;
+                            }
+                          })()}
+                        </div>
+                      </div>
                     </div>
 
                     {selectedGecko.info && (
@@ -900,19 +1042,49 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                   ))}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Birth/Hatch Date</label>
                                     <input type="date" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Availability</label>
-                                    <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm appearance-none" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
+                                    <select 
+                                      className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm appearance-none" 
+                                      value={formData.status} 
+                                      onChange={e => {
+                                        const newStatus = e.target.value as any;
+                                        if (newStatus === 'sold' && formData.status !== 'sold') {
+                                          setSellWorkflow({
+                                            isOpen: true,
+                                            geckoId: editingGecko?.id || '',
+                                            geckoName: formData.name || 'Unnamed Gecko',
+                                            geckoMorph: formData.morph || 'Unknown Morph',
+                                            purchasePrice: formData.purchasePrice || 0,
+                                            salePrice: '',
+                                            buyer: '',
+                                            date: new Date().toISOString().split('T')[0],
+                                            notes: ''
+                                          });
+                                        } else {
+                                          setFormData({...formData, status: newStatus});
+                                        }
+                                      }}
+                                    >
                                         <option value="available">Available</option>
-                                        <option value="keep">Keep</option>
+                                        <option value="keep">Holdback</option>
                                         <option value="sold">Sold</option>
-                                        <option value="dead">Dead</option>
                                     </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Purchase Price (Rp)</label>
+                                    <input 
+                                      type="number" 
+                                      placeholder="e.g. 500000"
+                                      className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" 
+                                      value={formData.purchasePrice !== undefined ? formData.purchasePrice : ''} 
+                                      onChange={e => setFormData({...formData, purchasePrice: e.target.value ? Number(e.target.value) : undefined})} 
+                                    />
                                 </div>
                             </div>
 
@@ -1039,6 +1211,114 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
         title="Delete Gecko"
         message="Are you sure you want to delete this gecko record? This action cannot be undone and will update your collection quota."
       />
+
+      {/* Sell Gecko Popup Modal */}
+      {sellWorkflow?.isOpen && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => handleCancelSale()} />
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative overflow-hidden p-8 animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => handleCancelSale()}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+                💰
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Sell Gecko</h3>
+                <p className="text-xs text-slate-400">Record a sale transaction for this Gecko</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl mb-6 space-y-2 border border-slate-100">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400 font-bold uppercase">Gecko</span>
+                <span className="font-black text-slate-900">{sellWorkflow.geckoName}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400 font-bold uppercase">Morph</span>
+                <span className="font-black text-emerald-600 uppercase text-[10px] tracking-wider">{sellWorkflow.geckoMorph}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400 font-bold uppercase">Purchase Price</span>
+                <span className="font-black text-slate-700">
+                  {sellWorkflow.purchasePrice > 0 
+                    ? `Rp ${sellWorkflow.purchasePrice.toLocaleString('id-ID')}` 
+                    : '-'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Sale Price (Rp)</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="e.g. 750000"
+                  value={sellWorkflow.salePrice}
+                  onChange={e => setSellWorkflow({ ...sellWorkflow, salePrice: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Buyer</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sufhan Arifin"
+                  value={sellWorkflow.buyer}
+                  onChange={e => setSellWorkflow({ ...sellWorkflow, buyer: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Date</label>
+                <input
+                  type="date"
+                  required
+                  value={sellWorkflow.date}
+                  onChange={e => setSellWorkflow({ ...sellWorkflow, date: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Notes (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sold via WhatsApp"
+                  value={sellWorkflow.notes || ''}
+                  onChange={e => setSellWorkflow({ ...sellWorkflow, notes: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleCancelSale()}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-sans font-bold rounded-2xl transition-all text-xs uppercase tracking-widest"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleConfirmSale()}
+                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-black rounded-2xl transition-all text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10"
+                >
+                  Confirm Sale
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -11,7 +11,12 @@ interface LegalModalProps {
 export default function LegalModal({ isOpen, onClose, type }: LegalModalProps) {
   const content = {
     privacy: {
-      title: 'Kebijakan Privasi Gecko Farm Pro',
+      title: (
+        <>
+          Kebijakan Privasi<br />
+          Gecko Farm <span className="text-emerald-500">Pro</span>
+        </>
+      ),
       icon: <Shield className="text-emerald-500" size={24} />,
       sections: [
         {
@@ -41,7 +46,12 @@ export default function LegalModal({ isOpen, onClose, type }: LegalModalProps) {
       ]
     },
     terms: {
-      title: 'Ketentuan Layanan Gecko Farm Pro',
+      title: (
+        <>
+          Ketentuan Layanan<br />
+          Gecko Farm <span className="text-emerald-500">Pro</span>
+        </>
+      ),
       icon: <FileText className="text-blue-500" size={24} />,
       sections: [
         {

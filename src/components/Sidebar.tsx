@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -11,7 +12,9 @@ import {
   DownloadCloud,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Banknote,
+  HelpCircle
 } from 'lucide-react';
 import { signOut } from '../lib/firebase';
 import { UserProfile } from '../types';
@@ -47,12 +50,26 @@ export default function Sidebar({
 }: SidebarProps) {
   const location = useLocation();
 
+  const [onboardingHighlightPath, setOnboardingHighlightPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleTourPath = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setOnboardingHighlightPath(customEvent.detail);
+    };
+    window.addEventListener('onboarding-tour-active-path', handleTourPath);
+    return () => {
+      window.removeEventListener('onboarding-tour-active-path', handleTourPath);
+    };
+  }, []);
+
   const sections = [
     {
       title: 'General',
       items: [
         { path: '/', label: 'Overview', icon: LayoutDashboard },
         { path: '/registry', label: 'Registry', icon: BookOpen },
+        { path: '/finance', label: 'Finance', icon: Banknote },
       ]
     },
     {
@@ -164,6 +181,7 @@ export default function Sidebar({
               <div className="space-y-0.5">
                 {section.items.map((item) => {
                   const isActive = location.pathname === item.path;
+                  const isTourHighlight = onboardingHighlightPath === item.path;
                   return (
                       <Link
                         key={item.path}
@@ -171,8 +189,10 @@ export default function Sidebar({
                         onClick={() => setMobileMenuOpen(false)}
                         className={`group flex items-center h-10 px-4 rounded-xl transition-all duration-300 relative ${
                           isActive 
-                            ? 'bg-slate-900/60 text-emerald-400' 
-                            : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/40'
+                            ? 'bg-slate-900/60 text-emerald-400 font-bold' 
+                            : isTourHighlight
+                              ? 'bg-emerald-500/10 text-emerald-400 ring-2 ring-emerald-500/30 animate-pulse font-extrabold'
+                              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/40'
                         }`}
                       >
                         {isActive && (
@@ -181,7 +201,7 @@ export default function Sidebar({
                             className="absolute left-0 w-1 h-5 bg-emerald-500 rounded-r-full"
                           />
                         )}
-                        <item.icon className={`w-5 h-5 flex-shrink-0 transition-all duration-300 ${isActive ? 'scale-100 opacity-100' : 'opacity-60 group-hover:opacity-100'}`} />
+                        <item.icon className={`w-5 h-5 flex-shrink-0 transition-all duration-300 ${isActive || isTourHighlight ? 'scale-110 opacity-100 text-emerald-400' : 'opacity-60 group-hover:opacity-100'}`} />
                         <motion.span 
                           initial={false}
                           animate={{ opacity: isCollapsed ? 0 : 1, x: isCollapsed ? -10 : 0 }}
@@ -189,6 +209,12 @@ export default function Sidebar({
                         >
                           {item.label}
                         </motion.span>
+                        {isTourHighlight && !isCollapsed && (
+                          <span className="absolute right-3 flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                        )}
                       </Link>
                   );
                 })}
@@ -236,6 +262,31 @@ export default function Sidebar({
                 </motion.span>
               </button>
             )}
+
+            <Link
+              to="/help-center"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`group flex items-center h-10 px-4 rounded-xl transition-all duration-300 relative ${
+                location.pathname === '/help-center' 
+                  ? 'bg-slate-900/60 text-emerald-400 font-bold' 
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-900/40'
+              }`}
+            >
+              {location.pathname === '/help-center' && (
+                <motion.div 
+                  layoutId="active-bar"
+                  className="absolute left-0 w-1 h-5 bg-emerald-500 rounded-r-full"
+                />
+              )}
+              <HelpCircle className="w-5 h-5 flex-shrink-0 transition-transform duration-300" />
+              <motion.span 
+                initial={false}
+                animate={{ opacity: isCollapsed ? 0 : 1, x: isCollapsed ? -10 : 0 }}
+                className={`font-bold tracking-tight whitespace-nowrap ml-3.5 text-[13px] ${isCollapsed ? 'hidden' : 'block'}`}
+              >
+                Help Center
+              </motion.span>
+            </Link>
 
             <Link
               to="/settings"

@@ -17,6 +17,20 @@ export interface Gecko {
   albinoStrain?: 'None' | 'Tremper' | 'Bell' | 'Rainwater';
   weight?: number;
   createdAt?: any;
+  purchasePrice?: number;
+}
+
+export interface FinanceTransaction {
+  id?: string;
+  userId: string;
+  type: 'sale' | 'expense';
+  category: string;
+  amount: number;
+  date: string;
+  notes?: string;
+  geckoId?: string;
+  buyer?: string;
+  createdAt?: any;
 }
 
 export interface Pairing {
@@ -54,6 +68,7 @@ export interface UserProfile {
   pairingCount: number;
   clutchCount: number;
   planLimit: number;
+  onboardingCompleted?: boolean;
 }
 
 export interface WeightLog {

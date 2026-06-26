@@ -136,12 +136,12 @@ export default function Dashboard({ profile }: DashboardProps) {
                       </td>
                       <td>
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          gecko.status === 'available' ? 'bg-emerald-100 text-emerald-700' : 
+                          (gecko.status === 'available' || !gecko.status) ? 'bg-emerald-100 text-emerald-700' : 
                           gecko.status === 'sold' ? 'bg-slate-100 text-slate-600' : 
-                          gecko.status === 'dead' ? 'bg-rose-100 text-rose-700' :
-                          'bg-blue-100 text-blue-700'
+                          gecko.status === 'keep' ? 'bg-blue-100 text-blue-700' :
+                          'bg-slate-100 text-slate-600'
                         }`}>
-                          {gecko.status}
+                          {gecko.status === 'keep' ? 'Holdback' : (gecko.status || 'available')}
                         </span>
                       </td>
                     </tr>

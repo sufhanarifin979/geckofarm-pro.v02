@@ -15,6 +15,9 @@ import Incubator from './components/Incubator';
 import MorphCalculator from './components/MorphCalculator';
 import Export from './components/Export';
 import Settings from './components/Settings';
+import Finance from './components/Finance';
+import HelpCenter from './components/HelpCenter';
+import OnboardingTour from './components/OnboardingTour';
 import AdminPanel from './components/AdminPanel';
 import Auth from './components/Auth';
 import PublicProfile from './components/PublicProfile';
@@ -332,9 +335,11 @@ export default function App() {
                     </div>
                   }>
                     <GeckoProvider profile={profile}>
+                      <OnboardingTour profile={profile} setProfile={setProfile} />
                       <Routes>
                         <Route path="/" element={<Dashboard profile={profile} />} />
                         <Route path="/registry" element={<Registry profile={profile} setProfile={setProfile} />} />
+                        <Route path="/finance" element={<Finance profile={profile} />} />
                         <Route path="/breeding" element={<Breeding profile={profile} />} />
                         <Route path="/incubator" element={<Incubator profile={profile} setProfile={setProfile} />} />
                         <Route path="/knowledge" element={<Knowledge profile={profile} />} />
@@ -342,6 +347,7 @@ export default function App() {
                         <Route path="/morph-calculator" element={<MorphCalculator profile={profile} />} />
                         <Route path="/export" element={<Export profile={profile} />} />
                         <Route path="/settings" element={<Settings profile={profile} setProfile={setProfile} />} />
+                        <Route path="/help-center" element={<HelpCenter profile={profile} />} />
                         <Route path="/admin" element={profile?.email === 'sufhan.arifin979@gmail.com' ? <AdminPanel /> : <Navigate to="/" replace />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>

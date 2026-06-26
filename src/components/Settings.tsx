@@ -88,6 +88,19 @@ export default function Settings({ profile, setProfile }: SettingsProps) {
     }
   };
 
+  const handleShowTourAgain = async () => {
+    if (!profile) return;
+    // Removed window.confirm because it is blocked inside sandboxed iframes.
+    // Setting onboardingCompleted to false will trigger the tour modal to open immediately.
+    setProfile({ ...profile, onboardingCompleted: false });
+    
+    try {
+      await updateDoc(doc(db, 'users', profile.uid), { onboardingCompleted: false });
+    } catch (err: any) {
+      console.warn("Gagal memperbarui status onboarding di Firestore (mode offline aktif):", err);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 animate-in fade-in duration-500 pb-20">
       <div>
@@ -251,6 +264,23 @@ export default function Settings({ profile, setProfile }: SettingsProps) {
                 <span>Kontak Admin</span>
                 <ChevronRight size={14} className="text-emerald-400 group-hover:text-emerald-700" />
              </a>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
+             <div className="flex items-center gap-2 mb-2">
+                <Info size={20} className="text-emerald-500" />
+                <h3 className="text-xs font-bold uppercase text-slate-500 tracking-widest leading-none">App Guide</h3>
+             </div>
+             <p className="text-[10px] text-slate-500 font-medium px-1">
+                Butuh bantuan untuk memahami alur fitur-fitur profesional Gecko Farm Pro? Anda dapat mengulang tur panduan kapan saja.
+             </p>
+             <button 
+               onClick={handleShowTourAgain}
+               className="w-full flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-emerald-700 transition-all group"
+             >
+                <span>Show Welcome Tour</span>
+                <ChevronRight size={14} className="text-slate-400 group-hover:text-emerald-600" />
+             </button>
           </div>
 
           <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
