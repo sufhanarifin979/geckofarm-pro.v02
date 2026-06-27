@@ -1044,11 +1044,15 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Birth/Hatch Date</label>
+                                    <div className="min-h-[2.25rem] flex items-end">
+                                        <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1 pb-1">Birth/Hatch Date</label>
+                                    </div>
                                     <input type="date" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Availability</label>
+                                    <div className="min-h-[2.25rem] flex items-end">
+                                        <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1 pb-1">Availability</label>
+                                    </div>
                                     <select 
                                       className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm appearance-none" 
                                       value={formData.status} 
@@ -1077,7 +1081,9 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                     </select>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Purchase Price (Rp)</label>
+                                    <div className="min-h-[2.25rem] flex items-end">
+                                        <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1 pb-1">Purchase Price (Rp)</label>
+                                    </div>
                                     <input 
                                       type="number" 
                                       placeholder="e.g. 500000"
@@ -1270,7 +1276,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                 <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Buyer</label>
                 <input
                   type="text"
-                  placeholder="e.g. Sufhan Arifin"
+                  placeholder="e.g. Nama Pembeli"
                   value={sellWorkflow.buyer}
                   onChange={e => setSellWorkflow({ ...sellWorkflow, buyer: e.target.value })}
                   className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all focus:outline-none"
