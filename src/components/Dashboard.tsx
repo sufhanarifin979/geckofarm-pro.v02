@@ -36,11 +36,28 @@ export default function Dashboard({ profile }: DashboardProps) {
   useEffect(() => {
     if (!profile) return;
 
+    const sortedGeckos = [...geckos].sort((a, b) => {
+      const getMs = (g: Gecko) => {
+        if (!g.createdAt) return Infinity;
+        if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
+        if (typeof g.createdAt.toDate === 'function') return g.createdAt.toDate().getTime();
+        if (g.createdAt.seconds !== undefined) return g.createdAt.seconds * 1000 + Math.floor((g.createdAt.nanoseconds || 0) / 1000000);
+        const parsed = Date.parse(g.createdAt);
+        if (!isNaN(parsed)) return parsed;
+        if (typeof g.createdAt === 'number') return g.createdAt;
+        return 0;
+      };
+      const msA = getMs(a);
+      const msB = getMs(b);
+      if (msB !== msA) return msB - msA;
+      return (b.id || '').localeCompare(a.id || '');
+    });
+
     setStats({
       totalGeckos: profile.geckoCount,
       activePairings: profile.pairingCount,
       incubating: profile.clutchCount,
-      recentGeckos: geckos.slice(0, 3)
+      recentGeckos: sortedGeckos.slice(0, 3)
     });
     setLoading(false);
   }, [profile, geckos]);

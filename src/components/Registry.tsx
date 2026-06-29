@@ -426,7 +426,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
 
   const filteredGeckos = useMemo(() => {
     const q = search.toLowerCase();
-    return geckos.filter(g => {
+    const filtered = geckos.filter(g => {
       const matchesSearch = g.name.toLowerCase().includes(q) || 
                            g.morph.toLowerCase().includes(q);
       const matchesGender = genderFilter === 'all' || g.gender === genderFilter;
@@ -436,6 +436,23 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                             (statusFilter === 'holdback' && (statusLower === 'holdback' || statusLower === 'keep')) ||
                             (statusFilter === 'sold' && statusLower === 'sold');
       return matchesSearch && matchesGender && matchesStatus;
+    });
+
+    return [...filtered].sort((a, b) => {
+      const getMs = (g: Gecko) => {
+        if (!g.createdAt) return Infinity;
+        if (typeof g.createdAt.toMillis === 'function') return g.createdAt.toMillis();
+        if (typeof g.createdAt.toDate === 'function') return g.createdAt.toDate().getTime();
+        if (g.createdAt.seconds !== undefined) return g.createdAt.seconds * 1000 + Math.floor((g.createdAt.nanoseconds || 0) / 1000000);
+        const parsed = Date.parse(g.createdAt);
+        if (!isNaN(parsed)) return parsed;
+        if (typeof g.createdAt === 'number') return g.createdAt;
+        return 0;
+      };
+      const msA = getMs(a);
+      const msB = getMs(b);
+      if (msB !== msA) return msB - msA;
+      return (b.id || '').localeCompare(a.id || '');
     });
   }, [geckos, search, genderFilter, statusFilter]);
 

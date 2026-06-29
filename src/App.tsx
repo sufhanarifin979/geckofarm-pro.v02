@@ -29,6 +29,17 @@ import { APP_LOGO_URL } from './constants';
 
 const Knowledge = lazy(() => import('./components/knowledge/Knowledge'));
 
+const PageTransition = ({ children }: { children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+    className="w-full"
+  >
+    {children}
+  </motion.div>
+);
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [profileState, setProfileState] = useState<UserProfile | null>(null);
@@ -310,19 +321,39 @@ export default function App() {
                 
                 {quotaWarning && (
                   isAdmin ? (
-                    <div className="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm animate-pulse flex-shrink-0">
+                    <div className="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm flex-shrink-0">
                       <span className="text-xl">⚠️</span>
                       <div className="flex-1">
-                        <p className="font-bold">Firestore Quota Limit Exceeded (Spark Plan / Daily Limit)</p>
+                        <p className="font-bold text-amber-900">Firestore Quota Limit Exceeded (Spark Plan / Daily Limit)</p>
                         <p className="text-amber-700 font-normal mt-0.5">Database telah mencapai batas harian Free Tier (Quota limit exceeded). Anda tetap dapat melihat aplikasi di mode **Offline/Fallback**. Batas kuota harian akan direset otomatis oleh Google keesokan harinya.</p>
+                        <div className="mt-2.5">
+                          <a 
+                            href="https://console.firebase.google.com/project/gen-lang-client-0198477376/firestore/databases/ai-studio-c37de128-66ef-4b94-b973-3bcd1099a28c/data?openUpgradeDialog=true" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow transition-all duration-200"
+                          >
+                            Buka Konsol Firebase & Upgrade Database
+                          </a>
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="mx-4 mt-4 p-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm animate-pulse flex-shrink-0">
+                    <div className="mx-4 mt-4 p-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm flex-shrink-0">
                       <span className="text-xl">🛠️</span>
                       <div className="flex-1">
                         <p className="font-bold text-slate-800">Sistem Sedang Dioptimalkan (Under Maintenance)</p>
                         <p className="text-slate-600 font-normal mt-0.5">Kami sedang melakukan pemeliharaan dan optimalisasi sistem secara berkala untuk kenyamanan Anda. Aplikasi tetap dapat digunakan dalam mode performa hemat.</p>
+                        <div className="mt-2.5">
+                          <a 
+                            href="https://console.firebase.google.com/project/gen-lang-client-0198477376/firestore/databases/ai-studio-c37de128-66ef-4b94-b973-3bcd1099a28c/data?openUpgradeDialog=true" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline font-semibold"
+                          >
+                            Buka Konsol Database
+                          </a>
+                        </div>
                       </div>
                     </div>
                   )
@@ -337,18 +368,18 @@ export default function App() {
                     <GeckoProvider profile={profile}>
                       <OnboardingTour profile={profile} setProfile={setProfile} />
                       <Routes>
-                        <Route path="/" element={<Dashboard profile={profile} />} />
-                        <Route path="/registry" element={<Registry profile={profile} setProfile={setProfile} />} />
-                        <Route path="/finance" element={<Finance profile={profile} />} />
-                        <Route path="/breeding" element={<Breeding profile={profile} />} />
-                        <Route path="/incubator" element={<Incubator profile={profile} setProfile={setProfile} />} />
-                        <Route path="/knowledge" element={<Knowledge profile={profile} />} />
-                        <Route path="/knowledge/:id" element={<Knowledge profile={profile} />} />
-                        <Route path="/morph-calculator" element={<MorphCalculator profile={profile} />} />
-                        <Route path="/export" element={<Export profile={profile} />} />
-                        <Route path="/settings" element={<Settings profile={profile} setProfile={setProfile} />} />
-                        <Route path="/help-center" element={<HelpCenter profile={profile} />} />
-                        <Route path="/admin" element={profile?.email === 'sufhan.arifin979@gmail.com' ? <AdminPanel /> : <Navigate to="/" replace />} />
+                        <Route path="/" element={<PageTransition><Dashboard profile={profile} /></PageTransition>} />
+                        <Route path="/registry" element={<PageTransition><Registry profile={profile} setProfile={setProfile} /></PageTransition>} />
+                        <Route path="/finance" element={<PageTransition><Finance profile={profile} /></PageTransition>} />
+                        <Route path="/breeding" element={<PageTransition><Breeding profile={profile} /></PageTransition>} />
+                        <Route path="/incubator" element={<PageTransition><Incubator profile={profile} setProfile={setProfile} /></PageTransition>} />
+                        <Route path="/knowledge" element={<PageTransition><Knowledge profile={profile} /></PageTransition>} />
+                        <Route path="/knowledge/:id" element={<PageTransition><Knowledge profile={profile} /></PageTransition>} />
+                        <Route path="/morph-calculator" element={<PageTransition><MorphCalculator profile={profile} /></PageTransition>} />
+                        <Route path="/export" element={<PageTransition><Export profile={profile} /></PageTransition>} />
+                        <Route path="/settings" element={<PageTransition><Settings profile={profile} setProfile={setProfile} /></PageTransition>} />
+                        <Route path="/help-center" element={<PageTransition><HelpCenter profile={profile} /></PageTransition>} />
+                        <Route path="/admin" element={profile?.email === 'sufhan.arifin979@gmail.com' ? <PageTransition><AdminPanel /></PageTransition> : <Navigate to="/" replace />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </GeckoProvider>

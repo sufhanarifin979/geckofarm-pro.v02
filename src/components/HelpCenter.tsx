@@ -205,12 +205,17 @@ export default function HelpCenter({ profile }: HelpCenterProps) {
         {
           id: 'fin-1',
           question: 'Bagaimana mencatat penjualan gecko?',
-          answer: 'Masuk ke menu Finance, klik tombol "Add Transaction" lalu pilih tipe "Income" (Pemasukan). Masukkan judul transaksi (misal: "Penjualan Gecko #005"), jumlah uang, tanggal, kategori (Reptile Sale), dan Anda juga dapat menautkannya langsung dengan ID gecko yang terjual.'
+          answer: 'Masuk ke Gecko Registry, lalu buka data gecko yang ingin dijual.\nTekan tombol Edit.\nUbah Status menjadi Sold.\nLengkapi informasi penjualan (harga jual, tanggal penjualan, pembeli jika tersedia).\nTekan Save.\nSetelah data disimpan, transaksi penjualan akan otomatis dibuat di menu Finance sebagai Income, sehingga Anda tidak perlu memasukkan transaksi secara manual lagi.'
+        },
+        {
+          id: 'fin-1-b',
+          question: 'Apakah saya perlu mencatat penjualan lagi di Finance?',
+          answer: 'Tidak perlu.\nSetiap gecko yang diubah statusnya menjadi Sold akan otomatis membuat transaksi pemasukan di Finance.\nMenu Finance hanya digunakan untuk melihat laporan keuangan atau menambahkan transaksi lain seperti pengeluaran, pembelian perlengkapan, pakan, obat, listrik, dan biaya operasional lainnya.'
         },
         {
           id: 'fin-2',
           question: 'Bagaimana mencatat pengeluaran?',
-          answer: 'Masuk ke menu Finance, klik tombol "Add Transaction" lalu pilih tipe "Expense" (Pengeluaran). Isi rincian seperti pengeluaran pakan (jangkrik/ulat), obat-obatan, pemeliharaan kandang, listrik, atau peralatan inkubator, lalu klik simpan.'
+          answer: 'Pengeluaran tidak dibuat otomatis. Untuk mencatat biaya operasional seperti pakan, suplemen, listrik, inkubator, obat, maupun perlengkapan kandang, buka menu Finance kemudian pilih Add Expense.'
         },
         {
           id: 'fin-3',
