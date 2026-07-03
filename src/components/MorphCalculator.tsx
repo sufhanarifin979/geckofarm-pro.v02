@@ -25,6 +25,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
+import { resolveMorph } from '../lib/morphResolver';
 import { UserProfile } from '../types';
 import PremiumModal from './PremiumModal';
 import { 
@@ -248,6 +249,14 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
     setAiAnalysis(null);
     aiLockRef.current = true;
 
+    let currentResults = results;
+    if (currentResults.length === 0) {
+      const pairingResults = calculatePairing(sire, dam);
+      currentResults = pairingResults;
+      setResults(pairingResults);
+      setIsCalculated(true);
+    }
+
     const formatParent = (p: GeneticState) => {
       const visuals = [...p.visual];
       const hets: string[] = [];
@@ -268,20 +277,41 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
       return `Visual: ${v}, Hets: ${h}, Traits: ${t}, Patterns: ${pt}`;
     };
 
-    const resultsContext = results.length > 0 
-      ? `Hasil perhitungan probabilitas Mendelian:\n${results.slice(0, 5).map(r => `- ${r.name}: ${r.probability}% (Rarity: ${r.rarity})`).join('\n')}\n${results.length > 5 ? '...dan lainnya.' : ''}`
+    const resultsContext = currentResults.length > 0 
+      ? `Hasil perhitungan probabilitas Mendelian:\n${currentResults.slice(0, 5).map(r => `- ${r.name}: ${r.probability}% (Rarity: ${r.rarity})`).join('\n')}\n${currentResults.length > 5 ? '...dan lainnya.' : ''}`
       : 'Belum ada hasil kalkulasi spesifik.';
 
-    const prompt = `Analisis Breeder Report untuk Leopard Gecko:
-Parent 1: ${formatParent(sire)}
-Parent 2: ${formatParent(dam)}
-Probabilitas Genetik: ${resultsContext}`;
+    const sortedProgeny = [...currentResults].sort((a, b) => {
+      if (b.breedingValue !== a.breedingValue) {
+        return b.breedingValue - a.breedingValue;
+      }
+      return b.desirability - a.desirability;
+    });
+    const bestProgeny = sortedProgeny[0];
+
+    let resolverResult = null;
+    if (bestProgeny) {
+      const progenyGenes = bestProgeny.visualGenes.map(id => ALL_GENES[id]?.name || id);
+      const progenyTraits = [
+        ...bestProgeny.visualTraits.map(id => VISUAL_TRAITS[id]?.name || id),
+        ...bestProgeny.patternTraits.map(id => PATTERN_TRAITS[id]?.name || id)
+      ];
+      resolverResult = resolveMorph({
+        genes: progenyGenes,
+        traits: progenyTraits
+      });
+    }
 
     try {
       const response = await fetch('/api/analyze-morph', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: JSON.stringify({ 
+          resolverResult,
+          parent1: formatParent(sire),
+          parent2: formatParent(dam),
+          resultsContext
+        })
       });
 
       if (!response.ok) {

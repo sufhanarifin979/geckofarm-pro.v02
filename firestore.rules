@@ -13,7 +13,7 @@ service cloud.firestore {
 
     // --- USER PROFILE RULES ---
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow get: if true;
       allow list: if isAdmin();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && request.auth.uid == userId 
@@ -23,7 +23,7 @@ service cloud.firestore {
 
     // --- GECKO RULES & SUBCOLLECTIONS ---
     match /geckos/{geckoId} {
-      allow get: if isSignedIn();
+      allow get: if true;
       allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid 
         && request.resource.data.name.size() < 100
@@ -58,6 +58,13 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
       allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid && request.resource.data.ownerId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // --- FINANCE TRANSACTIONS ---
+    match /finance_transactions/{transactionId} {
+      allow read: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid || request.auth.token.email == 'sufhan.arifin979@gmail.com');
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || request.auth.token.email == 'sufhan.arifin979@gmail.com');
     }
 
     // --- MORPH ENCYCLOPEDIA ---

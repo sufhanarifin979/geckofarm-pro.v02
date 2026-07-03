@@ -1,7 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from "@google/genai";
+import fs from 'fs';
+import path from 'path';
 
-// Cache client instance across serverless warm starts to prevent 504 timeouts and cold init penalties
+// Cache client instance across serverless warm starts
 let cachedAi: GoogleGenAI | null = null;
 let cachedApiKey: string | null = null;
 
@@ -20,16 +22,45 @@ function getAiClient(apiKey: string): GoogleGenAI {
   return cachedAi;
 }
 
+// Helper to load morph database
+function loadMorphDatabase() {
+  try {
+    const dbPath = path.join(process.cwd(), 'morph_database.json');
+    if (fs.existsSync(dbPath)) {
+      const data = fs.readFileSync(dbPath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error("Gagal membaca morph_database.json:", error);
+  }
+  return {};
+}
+
+// Helper to find entry in morph database
+function findDbMorph(db: any, name: string | null) {
+  if (!name) return null;
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  // Try direct slug check
+  const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  if (db[slug]) return db[slug];
+  
+  // Try searching keys
+  for (const key of Object.keys(db)) {
+    const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (cleanKey === normalized || db[key].name.toLowerCase() === name.toLowerCase()) {
+      return db[key];
+    }
+  }
+  return null;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { prompt } = req.body || {};
-  if (!prompt) {
-    return res.status(400).json({ error: "Permintaan kosong (No prompt provided)" });
-  }
-
+  const { resolverResult, parent1, parent2, resultsContext, prompt } = req.body || {};
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
@@ -39,30 +70,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const ai = getAiClient(apiKey);
+    const db = loadMorphDatabase();
 
-    const response = await ai.models.generateContent({ 
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: `Anda adalah Herpticulture Geneticist profesional yang berfokus pada Leopard Gecko, pengembangan lineage, breeding project komersial, dan strategi breeder jangka panjang.
-Tugas utama Anda adalah membantu breeder mengambil keputusan breeding yang lebih tepat, lebih menguntungkan, dan lebih strategis. Laporan Anda harus berupa "Consulting Report" yang profesional, bukan artikel edukasi umum yang bertele-tele.
+    let dbEntryText = "";
+    let closestMatchesText = "";
 
-──────────────────────────────
-ATURAN VITAL & WAJIB:
-1. Validasi seluruh morph berdasarkan genetika Leopard Gecko yang benar.
-2. Jangan pernah menganggap morph visual jika hanya tertulis "Het". Carrier tetap carrier, Visual tetap visual.
-3. JANGAN PERNAH menampilkan bagian "GENETIC DATA VALIDATION", "VALIDASI INPUT", "KOREKSI INPUT USER", atau "PERINGATAN INPUT". Breeder tidak perlu melihat validasi/koreksi ini. Langsung buat analisis dari laporan breeder.
-4. Data hasil kalkulasi probabilitas genetik dari Morph Calculator Geckofarm Pro adalah sumber kebenaran utama. JANGAN menghitung ulang probabilitas atau mengubah angka kalkulasi dari input!
-5. JANGAN membuat atau menebak harga atau estimasi harga!
-6. Semua nama morph atau combo wajib menggunakan format Bold (Contoh: **Tremper Albino**, **White & Yellow Eclipse**, **RAPTOR**, **Mack Snow**, **Enigma**).
-7. Gunakan Bahasa Indonesia profesional dan fokus breeder profesional, dengan gaya penulisan fokus pada pengambilan keputusan breeder, tidak terlalu akademis
+    if (resolverResult) {
+      if (resolverResult.officialMorph) {
+        const entry = findDbMorph(db, resolverResult.officialMorph);
+        if (entry) {
+          dbEntryText = JSON.stringify(entry, null, 2);
+        }
+      } else if (resolverResult.closestMatches && resolverResult.closestMatches.length > 0) {
+        const matchesWithDbInfo = resolverResult.closestMatches.map((m: any) => {
+          const entry = findDbMorph(db, m.name);
+          return {
+            ...m,
+            dbInfo: entry ? {
+              description: entry.description,
+              inheritanceSummary: entry.inheritanceSummary,
+              risk: entry.risk,
+              aiExplanation: entry.aiExplanation
+            } : null
+          };
+        });
+        closestMatchesText = JSON.stringify(matchesWithDbInfo, null, 2);
+      }
+    }
 
-──────────────────────────────
-ATURAN MORPH DOMINAN & SEPESIAL:
-- Morph Dominan / Incomplete Dominant: **White & Yellow**, **Mack Snow**, **Enigma**, **Lemon Frost**, **TUG Snow**, dll.
-- Morph ini tidak boleh disebut "Het". Jika input mengandung kesalahan seperti "Het White & Yellow" atau "Het Mack Snow", abaikan kata "Het" tersebut dan perlakukan langsung sebagai morph visual. JANGAN tampilkan peringatan atau koreksi genetika apa pun di laporan, lanjutkan analisis secara normal dari laporan.
+    // Build the system instructions and model input
+    const systemInstruction = `Anda adalah pakar genetika reptil profesional (Herpticulture Geneticist) spesialis Leopard Gecko, pengembangan lineage, breeding project komersial, dan strategi breeder jangka panjang.
+Tugas Anda adalah membuat Analisis Breeder Profesional V2 berdasarkan hasil dari Morph Resolver Engine yang diberikan dalam input.
 
-──────────────────────────────
+PENTING: Anda TIDAK BOLEH menentukan nama morph sendiri, membuat morph baru, mengubah Official Morph, menggabungkan nama morph, atau membuat trade name kustom. Nama morph sepenuhnya ditentukan oleh Morph Resolver Engine. Anda hanya bertugas menjelaskan dan menganalisis hasil resolver tersebut secara profesional untuk breeder.
+
 STRUKTUR LAPORAN (WAJIB MENGIKUTI STRUKTUR & JUDUL INI SECARA PERSIS):
 
 ### **⚠ GENETIC DATA VALIDATION** (HANYA tampilkan jika ada kesalahan nyata dalam data input, jika tidak ada lewati bagian ini)
@@ -70,10 +111,10 @@ PENTING: Hanya tampilkan bagian ini jika Anda menemukan kesalahan nyata dalam pe
 
 ### **🎯 QUICK BREEDER SUMMARY**
 Target Combo Utama:
-(Morph terbaik yang berpotensi dihasilkan)
+(Tulis nama Official Morph resmi dari hasil resolver. Jika hasil resolver mengembalikan officialMorph = null, Anda WAJIB menuliskan kalimat secara persis: "Belum ditemukan morph resmi." lalu jelaskan/bahas closestMatches, missingGenes, dan additionalGenes secara profesional di sini.)
 
 Best Holdback:
-(Kandidat holdback terbaik)
+(Kandidat holdback terbaik dari hasil breeding)
 
 Project Potential:
 [⭐ sampai ⭐⭐⭐⭐⭐]
@@ -169,7 +210,7 @@ JANGAN membuat, menebak, atau memberikan estimasi harga angka apa pun di sini!
 ──────────────────────────────
 
 ### **⚠ GENETIC RISK ANALYSIS**
-Deteksi dan jelaskan secara presisi terhadap risiko berikut jika gennya ada di dalam parents:
+Deteksi dan jelaskan secara presisi terhadap risiko berikut jika gennya ada di dalam parents atau keturunan:
 - Risiko genetik morph terkait (**White & Yellow Syndrome**, **Enigma Syndrome**, **Lemon Frost** Tumor Risk)
 - Risiko inbreeding
 - Risiko kehilangan trait
@@ -177,7 +218,32 @@ Deteksi dan jelaskan secara presisi terhadap risiko berikut jika gennya ada di d
 - Risiko kesehatan yang diketahui
 
 Jika tidak ditemukan risiko spesifik pada gen terkait, tampilkan kalimat ini persis:
-"Tidak ditemukan risiko genetik spesifik selain risiko umum breeding."`
+"Tidak ditemukan risiko genetik spesifik selain risiko umum breeding."
+
+──────────────────────────────
+GAYA PENULISAN:
+- Gunakan Bahasa Indonesia profesional dan persuasif, fokus breeder profesional, tidak terlalu bertele-tele atau akademis dasar.
+- Setiap kali Anda menyebutkan nama gen atau nama morph, gunakan format Bold (Contoh: **Tremper Albino**, **Enigma**, **RAPTOR**).
+- Jika ada peringatan risiko kritis, gunakan format blockquote (>) untuk menekankannya.`;
+
+    const promptText = resolverResult 
+      ? `DATA HASIL RESOLVER & KELUARAN GENETIK:
+- Hasil Morph Resolver: ${JSON.stringify(resolverResult, null, 2)}
+- Parent 1 (Sire): ${parent1 || 'N/A'}
+- Parent 2 (Dam): ${parent2 || 'N/A'}
+- Probabilitas Genetik Offspring: ${resultsContext || 'N/A'}
+
+${dbEntryText ? `INFORMASI DETIL DARI DATABASE RESMI GECKO FARM PRO:\n${dbEntryText}` : ''}
+${closestMatchesText ? `INFORMASI DETIL MENGENAI CLOSEST MATCHES:\n${closestMatchesText}` : ''}
+
+Silakan buat laporan analisis Breeder AI V2 yang sangat profesional sesuai petunjuk sistem.`
+      : (prompt || "Buat analisis genetik leopard gecko umum.");
+
+    const response = await ai.models.generateContent({ 
+      model: "gemini-3.5-flash",
+      contents: promptText,
+      config: {
+        systemInstruction
       }
     });
 
