@@ -220,7 +220,9 @@ export default function App() {
     setDeferredPrompt(null);
   };
 
-  if (loading) {
+  const isPublicPath = typeof window !== 'undefined' && (window.location.pathname.startsWith('/v/') || window.location.pathname.startsWith('/v'));
+
+  if (loading && !isPublicPath) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4 gap-6">
         <motion.div 
@@ -296,6 +298,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/v/:id" element={<PublicProfile />} />
+        <Route path="/v/:id/" element={<PublicProfile />} />
         <Route path="*" element={
           !user ? <Auth /> : (
             <div className="dashboard-grid relative">

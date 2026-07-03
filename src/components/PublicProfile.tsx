@@ -102,7 +102,8 @@ export default function PublicProfile() {
 
       } catch (err) {
         console.error('[DEBUG] Critical fetch error:', err);
-        setError('Terjadi kesalahan koneksi saat memuat data dari server.');
+        const errMsg = err instanceof Error ? err.message : String(err);
+        setError(`Terjadi kesalahan koneksi saat memuat data dari server. Detail: ${errMsg}`);
       } finally {
         setLoading(false);
       }
