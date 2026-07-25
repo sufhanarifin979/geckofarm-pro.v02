@@ -22,6 +22,7 @@ import AdminPanel from './components/AdminPanel';
 import Auth from './components/Auth';
 import PublicProfile from './components/PublicProfile';
 import { GeckoProvider } from './GeckoProvider';
+import { NotificationProvider } from './context/NotificationContext';
 import MigrationBanner from './components/MigrationBanner';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -301,95 +302,97 @@ export default function App() {
         <Route path="/v/:id/" element={<PublicProfile />} />
         <Route path="*" element={
           !user ? <Auth /> : (
-            <div className="dashboard-grid relative">
-              <Sidebar 
-                profile={profile} 
-                isCollapsed={!sidebarOpen}
-                setIsCollapsed={(val) => setSidebarOpen(!val)}
-                mobileMenuOpen={mobileMenuOpen}
-                setMobileMenuOpen={setMobileMenuOpen}
-                canInstall={canInstall}
-                onInstall={handleInstallClick}
-              />
-              
-              <main className="main-content flex-1 w-full">
-                <TopBar 
-                  profile={profile} 
-                  isSidebarCollapsed={!sidebarOpen}
-                  onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-                  onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
-                />
-                
-                <MigrationBanner />
-                
-                {quotaWarning && (
-                  isAdmin ? (
-                    <div className="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm flex-shrink-0">
-                      <span className="text-xl">⚠️</span>
-                      <div className="flex-1">
-                        <p className="font-bold text-amber-900">Firestore Quota Limit Exceeded (Spark Plan / Daily Limit)</p>
-                        <p className="text-amber-700 font-normal mt-0.5">Database telah mencapai batas harian Free Tier (Quota limit exceeded). Anda tetap dapat melihat aplikasi di mode **Offline/Fallback**. Batas kuota harian akan direset otomatis oleh Google keesokan harinya.</p>
-                        <div className="mt-2.5">
-                          <a 
-                            href="https://console.firebase.google.com/project/gen-lang-client-0198477376/firestore/databases/ai-studio-c37de128-66ef-4b94-b973-3bcd1099a28c/data?openUpgradeDialog=true" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow transition-all duration-200"
-                          >
-                            Buka Konsol Firebase & Upgrade Database
-                          </a>
+            <GeckoProvider profile={profile}>
+              <NotificationProvider profile={profile}>
+                <div className="dashboard-grid relative">
+                  <Sidebar 
+                    profile={profile} 
+                    isCollapsed={!sidebarOpen}
+                    setIsCollapsed={(val) => setSidebarOpen(!val)}
+                    mobileMenuOpen={mobileMenuOpen}
+                    setMobileMenuOpen={setMobileMenuOpen}
+                    canInstall={canInstall}
+                    onInstall={handleInstallClick}
+                  />
+                  
+                  <main className="main-content flex-1 w-full">
+                    <TopBar 
+                      profile={profile} 
+                      isSidebarCollapsed={!sidebarOpen}
+                      onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+                      onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    />
+                    
+                    <MigrationBanner />
+                    
+                    {quotaWarning && (
+                      isAdmin ? (
+                        <div className="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm flex-shrink-0">
+                          <span className="text-xl">⚠️</span>
+                          <div className="flex-1">
+                            <p className="font-bold text-amber-900">Firestore Quota Limit Exceeded (Spark Plan / Daily Limit)</p>
+                            <p className="text-amber-700 font-normal mt-0.5">Database telah mencapai batas harian Free Tier (Quota limit exceeded). Anda tetap dapat melihat aplikasi di mode **Offline/Fallback**. Batas kuota harian akan direset otomatis oleh Google keesokan harinya.</p>
+                            <div className="mt-2.5">
+                              <a 
+                                href="https://console.firebase.google.com/project/gen-lang-client-0198477376/firestore/databases/ai-studio-c37de128-66ef-4b94-b973-3bcd1099a28c/data?openUpgradeDialog=true" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow transition-all duration-200"
+                              >
+                                Buka Konsol Firebase & Upgrade Database
+                              </a>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mx-4 mt-4 p-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm flex-shrink-0">
-                      <span className="text-xl">🛠️</span>
-                      <div className="flex-1">
-                        <p className="font-bold text-slate-800">Sistem Sedang Dioptimalkan (Under Maintenance)</p>
-                        <p className="text-slate-600 font-normal mt-0.5">Kami sedang melakukan pemeliharaan dan optimalisasi sistem secara berkala untuk kenyamanan Anda. Aplikasi tetap dapat digunakan dalam mode performa hemat.</p>
-                        <div className="mt-2.5">
-                          <a 
-                            href="https://console.firebase.google.com/project/gen-lang-client-0198477376/firestore/databases/ai-studio-c37de128-66ef-4b94-b973-3bcd1099a28c/data?openUpgradeDialog=true" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline font-semibold"
-                          >
-                            Buka Konsol Database
-                          </a>
+                      ) : (
+                        <div className="mx-4 mt-4 p-4 bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-3 shadow-sm flex-shrink-0">
+                          <span className="text-xl">🛠️</span>
+                          <div className="flex-1">
+                            <p className="font-bold text-slate-800">Sistem Sedang Dioptimalkan (Under Maintenance)</p>
+                            <p className="text-slate-600 font-normal mt-0.5">Kami sedang melakukan pemeliharaan dan optimalisasi sistem secara berkala untuk kenyamanan Anda. Aplikasi tetap dapat digunakan dalam mode performa hemat.</p>
+                            <div className="mt-2.5">
+                              <a 
+                                href="https://console.firebase.google.com/project/gen-lang-client-0198477376/firestore/databases/ai-studio-c37de128-66ef-4b94-b973-3bcd1099a28c/data?openUpgradeDialog=true" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-600 hover:underline font-semibold"
+                              >
+                                Buka Konsol Database
+                              </a>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )
+                    )}
+                    
+                    <div className="flex-1 min-h-0 pb-12 sm:pb-20">
+                      <Suspense fallback={
+                        <div className="flex items-center justify-center p-20">
+                          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                        </div>
+                      }>
+                        <OnboardingTour profile={profile} setProfile={setProfile} />
+                        <Routes>
+                          <Route path="/" element={<PageTransition><Dashboard profile={profile} /></PageTransition>} />
+                          <Route path="/registry" element={<PageTransition><Registry profile={profile} setProfile={setProfile} /></PageTransition>} />
+                          <Route path="/finance" element={<PageTransition><Finance profile={profile} /></PageTransition>} />
+                          <Route path="/breeding" element={<PageTransition><Breeding profile={profile} /></PageTransition>} />
+                          <Route path="/incubator" element={<PageTransition><Incubator profile={profile} setProfile={setProfile} /></PageTransition>} />
+                          <Route path="/knowledge" element={<PageTransition><Knowledge profile={profile} /></PageTransition>} />
+                          <Route path="/knowledge/:id" element={<PageTransition><Knowledge profile={profile} /></PageTransition>} />
+                          <Route path="/morph-calculator" element={<PageTransition><MorphCalculator profile={profile} /></PageTransition>} />
+                          <Route path="/export" element={<PageTransition><Export profile={profile} /></PageTransition>} />
+                          <Route path="/settings" element={<PageTransition><Settings profile={profile} setProfile={setProfile} /></PageTransition>} />
+                          <Route path="/help-center" element={<PageTransition><HelpCenter profile={profile} /></PageTransition>} />
+                          <Route path="/admin" element={profile?.email === 'sufhan.arifin979@gmail.com' ? <PageTransition><AdminPanel /></PageTransition> : <Navigate to="/" replace />} />
+                          <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                      </Suspense>
                     </div>
-                  )
-                )}
-                
-                <div className="flex-1 min-h-0 pb-12 sm:pb-20">
-                  <Suspense fallback={
-                    <div className="flex items-center justify-center p-20">
-                      <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                    </div>
-                  }>
-                    <GeckoProvider profile={profile}>
-                      <OnboardingTour profile={profile} setProfile={setProfile} />
-                      <Routes>
-                        <Route path="/" element={<PageTransition><Dashboard profile={profile} /></PageTransition>} />
-                        <Route path="/registry" element={<PageTransition><Registry profile={profile} setProfile={setProfile} /></PageTransition>} />
-                        <Route path="/finance" element={<PageTransition><Finance profile={profile} /></PageTransition>} />
-                        <Route path="/breeding" element={<PageTransition><Breeding profile={profile} /></PageTransition>} />
-                        <Route path="/incubator" element={<PageTransition><Incubator profile={profile} setProfile={setProfile} /></PageTransition>} />
-                        <Route path="/knowledge" element={<PageTransition><Knowledge profile={profile} /></PageTransition>} />
-                        <Route path="/knowledge/:id" element={<PageTransition><Knowledge profile={profile} /></PageTransition>} />
-                        <Route path="/morph-calculator" element={<PageTransition><MorphCalculator profile={profile} /></PageTransition>} />
-                        <Route path="/export" element={<PageTransition><Export profile={profile} /></PageTransition>} />
-                        <Route path="/settings" element={<PageTransition><Settings profile={profile} setProfile={setProfile} /></PageTransition>} />
-                        <Route path="/help-center" element={<PageTransition><HelpCenter profile={profile} /></PageTransition>} />
-                        <Route path="/admin" element={profile?.email === 'sufhan.arifin979@gmail.com' ? <PageTransition><AdminPanel /></PageTransition> : <Navigate to="/" replace />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                      </Routes>
-                    </GeckoProvider>
-                  </Suspense>
+                  </main>
                 </div>
-              </main>
-            </div>
+              </NotificationProvider>
+            </GeckoProvider>
           )
         } />
       </Routes>

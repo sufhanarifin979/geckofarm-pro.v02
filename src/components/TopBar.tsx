@@ -2,6 +2,8 @@ import { Bell, User as UserIcon, Settings, Edit2, Menu, ChevronLeft, Crown, Down
 import { UserProfile } from '../types';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { useNotifications } from '../context/NotificationContext';
+import NotificationCenter from './NotificationCenter';
 
 interface TopBarProps {
   profile: UserProfile | null;
@@ -13,6 +15,8 @@ interface TopBarProps {
 export default function TopBar({ profile, isSidebarCollapsed, onToggleSidebar, onToggleMobileMenu }: TopBarProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const { unreadCount } = useNotifications();
 
   useEffect(() => {
     window.addEventListener('beforeinstallprompt', (e) => {
@@ -75,6 +79,23 @@ export default function TopBar({ profile, isSidebarCollapsed, onToggleSidebar, o
             <span className="hidden xs:inline">Install</span>
           </button>
         )}
+
+        {/* Smart Reminder / Notification Bell */}
+        <div className="relative">
+          <button 
+            id="notif-bell-button"
+            onClick={() => setIsNotifOpen(true)}
+            className="w-10 h-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 shadow-sm text-slate-600 hover:text-emerald-500 hover:border-emerald-200 hover:shadow-md active:scale-95 transition-all relative"
+            title="Open Notification Center"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-white text-[9px] font-black border-2 border-white animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
         
         <div className="flex items-center gap-2 bg-white px-2 sm:px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md cursor-pointer group relative">
           {profile?.subscription === 'premium' && (
@@ -91,6 +112,9 @@ export default function TopBar({ profile, isSidebarCollapsed, onToggleSidebar, o
           </div>
         </div>
       </div>
+
+      {/* Notification Drawer */}
+      <NotificationCenter isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
     </header>
   );
 }

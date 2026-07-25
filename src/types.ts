@@ -1,3 +1,5 @@
+export type Species = 'Leopard Gecko' | 'African Fat-Tailed Gecko';
+
 export interface Gecko {
   id?: string;
   name: string;
@@ -18,6 +20,7 @@ export interface Gecko {
   weight?: number;
   createdAt?: any;
   purchasePrice?: number;
+  species?: Species;
 }
 
 export interface FinanceTransaction {
@@ -43,6 +46,10 @@ export interface Pairing {
   ownerId: string;
   clutchCount: number;
   subscription?: string;
+  species?: Species;
+  status?: 'active' | 'closed';
+  closedAt?: string;
+  closeReason?: 'Breeding Finished' | 'Sold' | 'Retired' | 'Replaced Partner' | 'Other' | string;
 }
 
 export interface Clutch {
@@ -56,6 +63,7 @@ export interface Clutch {
   failedCount?: number;
   ownerId: string;
   incubator?: string;
+  species?: Species;
 }
 
 export interface UserProfile {
@@ -69,6 +77,9 @@ export interface UserProfile {
   clutchCount: number;
   planLimit: number;
   onboardingCompleted?: boolean;
+  defaultSpecies?: Species;
+  premiumActivatedAt?: any;
+  premiumExpiresAt?: any;
 }
 
 export interface WeightLog {
@@ -93,6 +104,7 @@ export interface Morph {
   traits: string[];
   price_range?: string;
   image_url?: string;
+  species?: Species;
 }
 
 export interface MorphRelation {

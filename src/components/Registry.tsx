@@ -38,6 +38,19 @@ import Tooltip from './ui/Tooltip';
 import { Loader2 } from 'lucide-react';
 import { useGeckos } from '../GeckoProvider';
 
+const AFT_PLACEHOLDERS = [
+  "E.G. WHITEOUT HET OREO",
+  "Whiteout",
+  "Whiteout Het Oreo",
+  "Oreo",
+  "Ghost",
+  "Zulu",
+  "Granite",
+  "Patternless",
+  "Caramel Albino",
+  "Whiteout Oreo"
+];
+
 interface RegistryProps {
   profile: UserProfile | null;
   setProfile: React.Dispatch<React.SetStateAction<UserProfile | null>>;
@@ -49,6 +62,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const { geckos, loading, refreshData } = useGeckos();
   const [search, setSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
+  const [speciesFilter, setSpeciesFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -62,6 +76,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const [geckoToDelete, setGeckoToDelete] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [aftPlaceholder, setAftPlaceholder] = useState("E.G. WHITEOUT HET OREO");
 
   // Toast System
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' }[]>([]);
@@ -81,6 +96,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
     gender: 'unsex',
     status: 'available',
     albinoStrain: 'None',
+    species: 'Leopard Gecko',
     sireId: '',
     damId: '',
     sireName: '',
@@ -342,6 +358,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
     setEditingGecko(null);
     setIsUploading(false);
     setPendingSale(null);
+    setAftPlaceholder("E.G. WHITEOUT HET OREO");
   };
 
   const handleConfirmSale = async () => {
@@ -378,6 +395,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
 
   const handleEdit = (gecko: Gecko) => {
     setEditingGecko(gecko);
+    const geckoSpecies = gecko.species || 'Leopard Gecko';
     setFormData({
       name: gecko.name || '',
       morph: gecko.morph || '',
@@ -385,6 +403,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       gender: gecko.gender || 'unsex',
       status: gecko.status || 'available',
       albinoStrain: gecko.albinoStrain || 'None',
+      species: geckoSpecies,
       sireId: gecko.sireId || '',
       damId: gecko.damId || '',
       sireName: gecko.sireName || '',
@@ -396,6 +415,13 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       purchasePrice: gecko.purchasePrice
     });
     setImgSrc(gecko.photoUrl || '');
+    if (geckoSpecies === 'African Fat-Tailed Gecko') {
+      const rand = AFT_PLACEHOLDERS[Math.floor(Math.random() * AFT_PLACEHOLDERS.length)];
+      const prefix = rand.toUpperCase().startsWith("E.G.") ? "" : "E.G. ";
+      setAftPlaceholder(`${prefix}${rand}`.toUpperCase());
+    } else {
+      setAftPlaceholder("E.G. WHITEOUT HET OREO");
+    }
     setIsModalOpen(true);
   };
 
@@ -430,12 +456,13 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       const matchesSearch = g.name.toLowerCase().includes(q) || 
                            g.morph.toLowerCase().includes(q);
       const matchesGender = genderFilter === 'all' || g.gender === genderFilter;
+      const matchesSpecies = speciesFilter === 'all' || (g.species || 'Leopard Gecko') === speciesFilter;
       const statusLower = (g.status || 'available').toLowerCase();
       const matchesStatus = statusFilter === 'all' || 
                             (statusFilter === 'available' && statusLower === 'available') ||
                             (statusFilter === 'holdback' && (statusLower === 'holdback' || statusLower === 'keep')) ||
                             (statusFilter === 'sold' && statusLower === 'sold');
-      return matchesSearch && matchesGender && matchesStatus;
+      return matchesSearch && matchesGender && matchesSpecies && matchesStatus;
     });
 
     return [...filtered].sort((a, b) => {
@@ -454,11 +481,11 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       if (msB !== msA) return msB - msA;
       return (b.id || '').localeCompare(a.id || '');
     });
-  }, [geckos, search, genderFilter, statusFilter]);
+  }, [geckos, search, genderFilter, speciesFilter, statusFilter]);
 
   useEffect(() => {
     setDisplayLimit(4);
-  }, [search, genderFilter, statusFilter]);
+  }, [search, genderFilter, speciesFilter, statusFilter]);
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500 pb-[calc(7rem+env(safe-area-inset-bottom))]">
@@ -478,7 +505,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
         </Tooltip>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col lg:flex-row gap-3">
         <div className="relative flex-grow">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
             <Search className="text-slate-600 group-focus-within:text-emerald-600 transition-colors" size={18} />
@@ -492,20 +519,40 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
           />
         </div>
 
-        <div className="flex bg-white p-1 h-14 rounded-2xl border border-slate-200 shadow-sm shrink-0">
-          {['all', 'male', 'female', 'unsex'].map(g => (
-            <button
-              key={g}
-              onClick={() => setGenderFilter(g)}
-              className={`flex-1 px-4 sm:px-6 h-full rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden flex items-center justify-center min-w-[70px] ${
-                genderFilter === g 
-                  ? 'bg-slate-900 text-white shadow-md' 
-                  : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
+        <div className="flex gap-3 flex-wrap sm:flex-nowrap">
+          {/* Species Filter */}
+          <div className="flex bg-white p-1 h-14 rounded-2xl border border-slate-200 shadow-sm shrink-0">
+            {['all', 'Leopard Gecko', 'African Fat-Tailed Gecko'].map(s => (
+              <button
+                key={s}
+                onClick={() => setSpeciesFilter(s)}
+                className={`flex-1 px-4 sm:px-6 h-full rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden flex items-center justify-center min-w-[70px] ${
+                  speciesFilter === s 
+                    ? 'bg-slate-900 text-white shadow-md' 
+                    : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+                }`}
+              >
+                {s === 'all' ? 'All' : (s === 'Leopard Gecko' ? 'Leopard' : 'AFT')}
+              </button>
+            ))}
+          </div>
+
+          {/* Gender Filter */}
+          <div className="flex bg-white p-1 h-14 rounded-2xl border border-slate-200 shadow-sm shrink-0">
+            {['all', 'male', 'female', 'unsex'].map(g => (
+              <button
+                key={g}
+                onClick={() => setGenderFilter(g)}
+                className={`flex-1 px-4 sm:px-6 h-full rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden flex items-center justify-center min-w-[70px] ${
+                  genderFilter === g 
+                    ? 'bg-slate-900 text-white shadow-md' 
+                    : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+                }`}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1005,6 +1052,31 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                         </div>
                         <div className="space-y-6">
                             <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">
+                                  Species
+                                </label>
+                                <select 
+                                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm appearance-none focus:border-emerald-500 transition-all outline-none" 
+                                  value={formData.species || 'Leopard Gecko'} 
+                                  onChange={e => {
+                                    const newSpecies = e.target.value as any;
+                                    setFormData({
+                                      ...formData,
+                                      species: newSpecies,
+                                      albinoStrain: 'None'
+                                    });
+                                    if (newSpecies === 'African Fat-Tailed Gecko') {
+                                      const rand = AFT_PLACEHOLDERS[Math.floor(Math.random() * AFT_PLACEHOLDERS.length)];
+                                      const prefix = rand.toUpperCase().startsWith("E.G.") ? "" : "E.G. ";
+                                      setAftPlaceholder(`${prefix}${rand}`.toUpperCase());
+                                    }
+                                  }}
+                                >
+                                    <option value="Leopard Gecko">Leopard Gecko</option>
+                                    <option value="African Fat-Tailed Gecko">African Fat-Tailed Gecko</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex justify-between px-1">
                                   Gecko Name
                                   {formErrors.name && <span className="text-red-500 text-[8px] animate-pulse">{formErrors.name}</span>}
@@ -1027,7 +1099,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                   {formErrors.morph && <span className="text-red-500 text-[8px] animate-pulse">{formErrors.morph}</span>}
                                 </label>
                                 <input 
-                                  placeholder="e.g. Mack Snow Eclipse"
+                                  placeholder={formData.species === 'African Fat-Tailed Gecko' ? aftPlaceholder : "e.g. Mack Snow Eclipse"}
                                   className={`w-full px-5 py-3 bg-slate-50 border rounded-2xl font-bold transition-all text-sm uppercase ${
                                     formErrors.morph ? 'border-red-300 ring-4 ring-red-50' : 'border-slate-200 focus:border-emerald-500'
                                   }`} 
@@ -1038,27 +1110,29 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                   }} 
                                 />
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">
-                                  Albino Strain
-                                </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                  {['None', 'Tremper', 'Bell', 'Rainwater'].map(strain => (
-                                    <button
-                                      key={strain}
-                                      type="button"
-                                      onClick={() => setFormData(prev => ({ ...prev, albinoStrain: strain as any }))}
-                                      className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                        formData.albinoStrain === strain
-                                          ? 'bg-emerald-500 text-white shadow-md'
-                                          : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
-                                      }`}
-                                    >
-                                      {strain}
-                                    </button>
-                                  ))}
-                                </div>
-                            </div>
+                            {formData.species !== 'African Fat-Tailed Gecko' && (
+                              <div className="space-y-1">
+                                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">
+                                    Albino Strain
+                                  </label>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {['None', 'Tremper', 'Bell', 'Rainwater'].map(strain => (
+                                      <button
+                                        key={strain}
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, albinoStrain: strain as any }))}
+                                        className={`py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                          formData.albinoStrain === strain
+                                            ? 'bg-emerald-500 text-white shadow-md'
+                                            : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                        }`}
+                                      >
+                                        {strain}
+                                      </button>
+                                    ))}
+                                  </div>
+                              </div>
+                            )}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="space-y-1">
                                     <div className="min-h-[2.25rem] flex items-end">
@@ -1127,7 +1201,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                       }}
                                     >
                                         <option value="">Select from Stock...</option>
-                                        {geckos.filter(g => g.gender === 'male' && g.status !== 'sold' && g.status !== 'dead').map(g => (
+                                        {geckos.filter(g => g.gender === 'male' && g.status !== 'sold' && g.status !== 'dead' && (g.species || 'Leopard Gecko') === (formData.species || 'Leopard Gecko')).map(g => (
                                           <option key={g.id} value={g.id}>{g.name}</option>
                                         ))}
                                     </select>
@@ -1155,7 +1229,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                       }}
                                     >
                                         <option value="">Select from Stock...</option>
-                                        {geckos.filter(g => g.gender === 'female' && g.status !== 'sold' && g.status !== 'dead').map(g => (
+                                        {geckos.filter(g => g.gender === 'female' && g.status !== 'sold' && g.status !== 'dead' && (g.species || 'Leopard Gecko') === (formData.species || 'Leopard Gecko')).map(g => (
                                           <option key={g.id} value={g.id}>{g.name}</option>
                                         ))}
                                     </select>

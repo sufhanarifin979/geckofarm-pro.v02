@@ -6,6 +6,7 @@ import { PATTERN_MORPHS } from './patterns';
 import { COMPLEX_COMBOS } from './combos';
 import { SPECIAL_PROJECTS } from './special';
 import { GENETIC_MORPHS } from './genetic';
+import { AFT_MORPHS } from './aft';
 
 export const COMPLETE_MORPH_DATABASE = [
   ...BASE_MORPHS,
@@ -15,5 +16,6 @@ export const COMPLETE_MORPH_DATABASE = [
   ...PATTERN_MORPHS,
   ...GENETIC_MORPHS,
   ...COMPLEX_COMBOS,
-  ...SPECIAL_PROJECTS
+  ...SPECIAL_PROJECTS,
+  ...AFT_MORPHS
 ];

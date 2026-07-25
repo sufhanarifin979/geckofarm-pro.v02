@@ -29,6 +29,47 @@ export default function AdminPanel() {
   const [filter, setFilter] = useState<'all' | 'free' | 'premium'>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  // Premium management states
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [modalSubscription, setModalSubscription] = useState<'free' | 'premium'>('free');
+  const [modalActivatedDate, setModalActivatedDate] = useState('');
+  const [modalExpiresDate, setModalExpiresDate] = useState('');
+
+  // Date helper functions
+  const getTodayString = (): string => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getFutureDateString = (days: number): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatDateToInput = (timestamp: any): string => {
+    if (!timestamp) return '';
+    let d: Date;
+    if (typeof timestamp.toDate === 'function') {
+      d = timestamp.toDate();
+    } else if (timestamp.seconds !== undefined) {
+      d = new Date(timestamp.seconds * 1000);
+    } else {
+      d = new Date(timestamp);
+    }
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     if (!auth.currentUser) {
       setLoading(false);
@@ -77,18 +118,77 @@ export default function AdminPanel() {
     }
   };
 
-  const handleUpgrade = async (uid: string, currentSub: string) => {
-    setUpdatingId(uid);
+  const handleOpenManageModal = (user: UserProfile) => {
+    setSelectedUser(user);
+    setModalSubscription(user.subscription);
+    
+    const isMigration = user.subscription === 'premium' && (!user.premiumActivatedAt || !user.premiumExpiresAt);
+    
+    if (user.subscription === 'premium' && !isMigration) {
+      setModalActivatedDate(formatDateToInput(user.premiumActivatedAt));
+      setModalExpiresDate(formatDateToInput(user.premiumExpiresAt));
+    } else {
+      setModalActivatedDate(getTodayString());
+      setModalExpiresDate(getFutureDateString(365));
+    }
+  };
+
+  const handleSubscriptionChange = (newSub: 'free' | 'premium') => {
+    setModalSubscription(newSub);
+    if (newSub === 'premium' && (!modalActivatedDate || !modalExpiresDate)) {
+      setModalActivatedDate(getTodayString());
+      setModalExpiresDate(getFutureDateString(365));
+    }
+  };
+
+  const handleSaveSubscription = async () => {
+    if (!selectedUser) return;
+    setUpdatingId(selectedUser.uid);
     try {
-      const newSub = currentSub === 'premium' ? 'free' : 'premium';
-      const newLimit = newSub === 'premium' ? 10000 : 10;
-      await updateDoc(doc(db, 'users', uid), {
-        subscription: newSub,
-        planLimit: newLimit
-      });
+      let finalActivated: any = null;
+      let finalExpired: any = null;
+
+      if (modalSubscription === 'premium') {
+        finalActivated = new Date(modalActivatedDate + "T00:00:00");
+        finalExpired = new Date(modalExpiresDate + "T23:59:59");
+        
+        try {
+          localStorage.removeItem(`premium_expired_notified_${selectedUser.uid}`);
+        } catch (e) {}
+
+        await updateDoc(doc(db, 'users', selectedUser.uid), {
+          subscription: 'premium',
+          planLimit: 10000,
+          premiumActivatedAt: finalActivated,
+          premiumExpiresAt: finalExpired
+        });
+      } else {
+        await updateDoc(doc(db, 'users', selectedUser.uid), {
+          subscription: 'free',
+          planLimit: 10,
+          premiumActivatedAt: null,
+          premiumExpiresAt: null
+        });
+      }
+      
+      // Update local state profiles array
+      setProfiles(prev => prev.map(p => {
+        if (p.uid === selectedUser.uid) {
+          return {
+            ...p,
+            subscription: modalSubscription,
+            planLimit: modalSubscription === 'premium' ? 10000 : 10,
+            premiumActivatedAt: finalActivated,
+            premiumExpiresAt: finalExpired
+          };
+        }
+        return p;
+      }));
+
       clearCachedAdminUsers();
+      setSelectedUser(null);
     } catch (error) {
-      console.error(error);
+      console.error("Failed to save subscription update:", error);
     } finally {
       setUpdatingId(null);
     }
@@ -251,11 +351,18 @@ export default function AdminPanel() {
                           </div>
                         </td>
                         <td className="p-6">
-                          <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                            p.subscription === 'premium' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-                          }`}>
-                            {p.subscription}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest w-max ${
+                              p.subscription === 'premium' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
+                            }`}>
+                              {p.subscription}
+                            </span>
+                            {p.subscription === 'premium' && (!p.premiumActivatedAt || !p.premiumExpiresAt) && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[7px] font-bold text-amber-700 bg-amber-50 border border-amber-100 uppercase tracking-tight w-max animate-pulse">
+                                Migration Required
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-6">
                            <div className="flex flex-col gap-1 w-24">
@@ -266,13 +373,25 @@ export default function AdminPanel() {
                            </div>
                         </td>
                         <td className="p-6 text-right">
-                          <button
-                            disabled={updatingId === p.uid}
-                            onClick={() => handleUpgrade(p.uid, p.subscription)}
-                            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-50"
-                          >
-                            {updatingId === p.uid ? '...' : (p.subscription === 'premium' ? 'Downgrade' : 'Upgrade Premium')}
-                          </button>
+                          {p.subscription === 'premium' && (!p.premiumActivatedAt || !p.premiumExpiresAt) ? (
+                            <button
+                              onClick={() => handleOpenManageModal(p)}
+                              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md shadow-amber-500/10"
+                            >
+                              Update Premium Date
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenManageModal(p)}
+                              className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${
+                                p.subscription === 'premium'
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                                  : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/10'
+                              }`}
+                            >
+                              {p.subscription === 'premium' ? 'Manage' : 'Upgrade Premium'}
+                            </button>
+                          )}
                         </td>
                       </motion.tr>
                     ))}
@@ -290,6 +409,135 @@ export default function AdminPanel() {
           >
             <AdminEncyclopedia />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Manage Subscription Modal */}
+      <AnimatePresence>
+        {selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl p-8 max-w-md w-full relative space-y-6"
+            >
+              <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                  <Zap size={24} />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg tracking-tight text-slate-900 dark:text-white uppercase">Premium Subscription</h3>
+                  <p className="text-[10px] font-medium text-slate-400">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              {/* User Farm Details Info */}
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/30 p-3 rounded-2xl border border-slate-100/50 dark:border-slate-800/50">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
+                  {selectedUser.farmPhotoUrl ? (
+                    <img src={selectedUser.farmPhotoUrl} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <UserIcon size={18} className="text-slate-400" />
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-black text-xs uppercase tracking-tight text-slate-800 dark:text-white">{selectedUser.farmName || 'Unnamed Farm'}</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">Geckos: {selectedUser.geckoCount}</span>
+                </div>
+              </div>
+
+              {/* Subscription Option Selector */}
+              <div className="space-y-2">
+                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Subscription Tier</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSubscriptionChange('free')}
+                    className={`p-4 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex flex-col items-center gap-2 transition-all ${
+                      modalSubscription === 'free'
+                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 text-blue-600'
+                        : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-lg">○</span>
+                    Free Tier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubscriptionChange('premium')}
+                    className={`p-4 rounded-2xl border font-black text-[10px] uppercase tracking-wider flex flex-col items-center gap-2 transition-all ${
+                      modalSubscription === 'premium'
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600'
+                        : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-lg">●</span>
+                    Premium Pro
+                  </button>
+                </div>
+              </div>
+
+              {/* Date Pickers (only for premium) */}
+              {modalSubscription === 'premium' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Activated Date</label>
+                      <input
+                        type="date"
+                        value={modalActivatedDate}
+                        onChange={(e) => setModalActivatedDate(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Expired Date</label>
+                      <input
+                        type="date"
+                        value={modalExpiresDate}
+                        onChange={(e) => setModalExpiresDate(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalActivatedDate(getTodayString());
+                        setModalExpiresDate(getFutureDateString(365));
+                      }}
+                      className="text-[9px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-wider flex items-center gap-1"
+                    >
+                      Reset to 1 Year
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUser(null)}
+                  className="flex-1 py-3 border border-slate-200 dark:border-slate-800 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={updatingId !== null || (modalSubscription === 'premium' && (!modalActivatedDate || !modalExpiresDate))}
+                  onClick={handleSaveSubscription}
+                  className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {updatingId !== null ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : 'Save Changes'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

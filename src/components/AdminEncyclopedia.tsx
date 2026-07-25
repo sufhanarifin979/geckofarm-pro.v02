@@ -57,6 +57,7 @@ interface MorphEntry {
   credited_breeders?: string[];
   created_at?: any;
   updated_at?: any;
+  species?: 'Leopard Gecko' | 'African Fat-Tailed Gecko';
 }
 
 export default function AdminEncyclopedia() {
@@ -89,7 +90,8 @@ export default function AdminEncyclopedia() {
     selection_priority: [],
     tags: [],
     reference_links: [],
-    credited_breeders: []
+    credited_breeders: [],
+    species: 'Leopard Gecko'
   });
 
   useEffect(() => {
@@ -229,13 +231,17 @@ export default function AdminEncyclopedia() {
       selection_priority: [],
       tags: [],
       reference_links: [],
-      credited_breeders: []
+      credited_breeders: [],
+      species: 'Leopard Gecko'
     });
   };
 
   const openEdit = (morph: MorphEntry) => {
     setEditingMorph(morph);
-    setFormData(morph);
+    setFormData({
+      ...morph,
+      species: morph.species || 'Leopard Gecko'
+    });
     setIsModalOpen(true);
   };
 
@@ -521,7 +527,7 @@ export default function AdminEncyclopedia() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
                           <select 
@@ -556,6 +562,17 @@ export default function AdminEncyclopedia() {
                             {['Recessive', 'Incomplete Dominant', 'Dominant', 'Polygenetic', 'Line-bred'].map(v => (
                               <option key={v} value={v}>{v}</option>
                             ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Species</label>
+                          <select 
+                            value={formData.species || 'Leopard Gecko'}
+                            onChange={(e) => setFormData(prev => ({ ...prev, species: e.target.value as any }))}
+                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all"
+                          >
+                            <option value="Leopard Gecko">Leopard Gecko</option>
+                            <option value="African Fat-Tailed Gecko">African Fat-Tailed Gecko</option>
                           </select>
                         </div>
                       </div>

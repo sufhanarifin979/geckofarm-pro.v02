@@ -31,6 +31,8 @@ import PremiumModal from './PremiumModal';
 import { 
   VISUAL_TRAITS, 
   PATTERN_TRAITS,
+  AFT_VISUAL_TRAITS,
+  AFT_PATTERN_TRAITS,
   calculatePairing, 
   GeneticState, 
   PredictionResult,
@@ -71,11 +73,39 @@ const CALCULATOR_GENES = {
   ...RESTRICTED_DOMINANT 
 };
 
+const AFT_RESTRICTED_RECESSIVE: Record<string, GeneDefinition> = {
+  'aft-oreo': { id: 'aft-oreo', name: 'Oreo', type: 'recessive' },
+  'aft-patternless': { id: 'aft-patternless', name: 'Patternless', type: 'recessive' },
+  'aft-ghost': { id: 'aft-ghost', name: 'Ghost', type: 'recessive', warning: 'Ghost females may become infertile.' },
+  'aft-caramel': { id: 'aft-caramel', name: 'Caramel', type: 'recessive', warning: 'Caramel females may become infertile.' },
+  'aft-amelanistic': { id: 'aft-amelanistic', name: 'Amelanistic', type: 'recessive' },
+  'aft-zulu': { id: 'aft-zulu', name: 'Zulu', type: 'recessive' },
+  'aft-stinger': { id: 'aft-stinger', name: 'Stinger', type: 'recessive' },
+  'aft-zero': { id: 'aft-zero', name: 'Zero', type: 'recessive' },
+};
+
+const AFT_RESTRICTED_CODOMINANT: Record<string, GeneDefinition> = {
+  'aft-whiteout': { id: 'aft-whiteout', name: 'Whiteout', type: 'codominant', super_form: 'aft-super-whiteout' },
+  'aft-stripe': { id: 'aft-stripe', name: 'Stripe', type: 'codominant', super_form: 'aft-super-stripe' },
+};
+
+const AFT_RESTRICTED_DOMINANT: Record<string, GeneDefinition> = {
+  'aft-banded': { id: 'aft-banded', name: 'Banded', type: 'dominant' },
+};
+
+const ALL_CALCULATOR_GENES = {
+  ...CALCULATOR_GENES,
+  ...AFT_RESTRICTED_RECESSIVE,
+  ...AFT_RESTRICTED_CODOMINANT,
+  ...AFT_RESTRICTED_DOMINANT
+};
+
 interface MorphCalculatorProps {
   profile: UserProfile | null;
 }
 
 export default function MorphCalculator({ profile }: MorphCalculatorProps) {
+  const [activeSpecies, setActiveSpecies] = useState<'Leopard Gecko' | 'African Fat-Tailed Gecko'>('Leopard Gecko');
   const [sire, setSire] = useState<GeneticState>({ visual: [], hets: [], visualTraits: [], patternTraits: [], traitLevels: {} });
   const [dam, setDam] = useState<GeneticState>({ visual: [], hets: [], visualTraits: [], patternTraits: [], traitLevels: {} });
   const [results, setResults] = useState<PredictionResult[]>([]);
@@ -108,7 +138,7 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
   };
 
   const calculate = () => {
-    const pairingResults = calculatePairing(sire, dam);
+    const pairingResults = calculatePairing(sire, dam, activeSpecies);
     setResults(pairingResults);
     setIsCalculated(true);
     setActiveTab('prob');
@@ -127,8 +157,8 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
   const toggleGene = (parentId: 'sire' | 'dam', geneId: string, type: 'visual' | 'hets' | 'traits' | 'patterns' | 'super' | 'linebred', level?: string) => {
     const setter = parentId === 'sire' ? setSire : setDam;
     const gene = type === 'linebred' 
-      ? (VISUAL_TRAITS[geneId] || PATTERN_TRAITS[geneId])
-      : CALCULATOR_GENES[geneId as keyof typeof CALCULATOR_GENES];
+      ? (VISUAL_TRAITS[geneId] || PATTERN_TRAITS[geneId] || AFT_VISUAL_TRAITS[geneId] || AFT_PATTERN_TRAITS[geneId])
+      : ALL_CALCULATOR_GENES[geneId as keyof typeof ALL_CALCULATOR_GENES];
 
     setter(prev => {
       const newState = { ...prev };
@@ -148,7 +178,7 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
           }
         } else if (level) {
           // Set level
-          const isFromPattern = !!PATTERN_TRAITS[geneId];
+          const isFromPattern = !!PATTERN_TRAITS[geneId] || !!AFT_PATTERN_TRAITS[geneId];
           if (isFromPattern) {
             if (!isPattern) newState.patternTraits = [...newState.patternTraits, geneId];
           } else {
@@ -161,7 +191,8 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
       
       // Albino Conflict Prevention - If selecting an albino, remove other albinos
       if ((gene as any)?.group === 'albino') {
-        const otherAlbinos = Object.values(RESTRICTED_RECESSIVE)
+        const currentRecessive = activeSpecies === 'African Fat-Tailed Gecko' ? AFT_RESTRICTED_RECESSIVE : RESTRICTED_RECESSIVE;
+        const otherAlbinos = Object.values(currentRecessive)
           .filter(g => g.group === 'albino' && g.id !== geneId)
           .map(g => g.id);
         
@@ -213,6 +244,17 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
       }
       return newState;
     });
+  };
+
+  const handleSpeciesChange = (species: 'Leopard Gecko' | 'African Fat-Tailed Gecko') => {
+    setActiveSpecies(species);
+    // Call reset to clear previous selection
+    setSire({ visual: [], hets: [], visualTraits: [], patternTraits: [], traitLevels: {} });
+    setDam({ visual: [], hets: [], visualTraits: [], patternTraits: [], traitLevels: {} });
+    setResults([]);
+    setIsCalculated(false);
+    setAiAnalysis(null);
+    setActiveTab(null);
   };
 
   const isPremium = profile?.subscription === 'premium' || profile?.email === 'sufhan.arifin979@gmail.com';
@@ -293,8 +335,8 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
     if (bestProgeny) {
       const progenyGenes = bestProgeny.visualGenes.map(id => ALL_GENES[id]?.name || id);
       const progenyTraits = [
-        ...bestProgeny.visualTraits.map(id => VISUAL_TRAITS[id]?.name || id),
-        ...bestProgeny.patternTraits.map(id => PATTERN_TRAITS[id]?.name || id)
+        ...bestProgeny.visualTraits.map(id => (VISUAL_TRAITS[id] || AFT_VISUAL_TRAITS[id])?.name || id),
+        ...bestProgeny.patternTraits.map(id => (PATTERN_TRAITS[id] || AFT_PATTERN_TRAITS[id])?.name || id)
       ];
       resolverResult = resolveMorph({
         genes: progenyGenes,
@@ -310,7 +352,10 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
           resolverResult,
           parent1: formatParent(sire),
           parent2: formatParent(dam),
-          resultsContext
+          resultsContext,
+          parent1Species: activeSpecies,
+          parent2Species: activeSpecies,
+          species: activeSpecies
         })
       });
 
@@ -343,11 +388,28 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-black dark:text-black tracking-tight">Morph Calculator Pro</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Professional Breeder-Grade Inheritance Calculator.</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-3">Professional Breeder-Grade Inheritance Calculator.</p>
+          
+          {/* Species Toggle */}
+          <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm shrink-0 w-fit">
+            {(['Leopard Gecko', 'African Fat-Tailed Gecko'] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => handleSpeciesChange(s)}
+                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden flex items-center justify-center ${
+                  activeSpecies === s 
+                    ? 'bg-slate-950 dark:bg-white text-white dark:text-slate-900 shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
+              >
+                {s === 'Leopard Gecko' ? 'Leopard Gecko' : 'Fat-Tailed (AFT)'}
+              </button>
+            ))}
+          </div>
         </div>
         <Link 
           to="/knowledge" 
-          className="flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 hover:bg-emerald-500 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 transition-all shadow-sm border border-slate-200 dark:border-slate-800 hover:border-emerald-400 group"
+          className="flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 hover:bg-emerald-500 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 transition-all shadow-sm border border-slate-200 dark:border-slate-800 hover:border-emerald-400 group h-fit self-end"
         >
           <BookOpen className="w-4 h-4 text-emerald-500 group-hover:text-white transition-colors" />
           Morph Knowledge
@@ -582,6 +644,7 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
             parent={activeParent === 'sire' ? sire : dam}
             onClose={() => setActiveParent(null)}
             onToggle={(id, type, level) => toggleGene(activeParent, id, type, level)}
+            activeSpecies={activeSpecies}
           />
         )}
       </AnimatePresence>
@@ -624,7 +687,7 @@ function ParentCard({ parent, type, onClick }: { parent: GeneticState; type: str
         ) : (
           <>
             {parent.visual.map(id => {
-              const gene = CALCULATOR_GENES[id as keyof typeof CALCULATOR_GENES];
+              const gene = ALL_CALCULATOR_GENES[id as keyof typeof ALL_CALCULATOR_GENES];
               const isSuper = gene?.type === 'codominant';
               return (
                 <span key={id} className={cn(
@@ -638,7 +701,7 @@ function ParentCard({ parent, type, onClick }: { parent: GeneticState; type: str
               );
             })}
             {parent.hets.map(id => {
-              const gene = CALCULATOR_GENES[id as keyof typeof CALCULATOR_GENES];
+              const gene = ALL_CALCULATOR_GENES[id as keyof typeof ALL_CALCULATOR_GENES];
               const isVisual = gene?.type === 'codominant' || gene?.type === 'dominant';
               return (
                 <span key={id} className={cn(
@@ -668,16 +731,35 @@ function ParentCard({ parent, type, onClick }: { parent: GeneticState; type: str
   );
 }
 
-function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState; onClose: () => void; onToggle: (id: string, type: 'visual' | 'hets' | 'traits' | 'patterns' | 'super' | 'linebred', level?: string) => void }) {
-  // Check if any albino is already selected
-  const selectedAlbino = Object.values(RESTRICTED_RECESSIVE).find(g => 
-    g.group === 'albino' && (parent.visual.includes(g.id) || parent.hets.includes(g.id))
-  );
-
-  const LINE_BREED_IDS = [
+function SelectionOverlay({ 
+  parent, 
+  onClose, 
+  onToggle,
+  activeSpecies
+}: { 
+  parent: GeneticState; 
+  onClose: () => void; 
+  onToggle: (id: string, type: 'visual' | 'hets' | 'traits' | 'patterns' | 'super' | 'linebred', level?: string) => void;
+  activeSpecies: 'Leopard Gecko' | 'African Fat-Tailed Gecko';
+}) {
+  const isAft = activeSpecies === 'African Fat-Tailed Gecko';
+  const currentRecessive = isAft ? AFT_RESTRICTED_RECESSIVE : RESTRICTED_RECESSIVE;
+  const currentCodominant = isAft ? AFT_RESTRICTED_CODOMINANT : RESTRICTED_CODOMINANT;
+  const currentDominant = isAft ? AFT_RESTRICTED_DOMINANT : RESTRICTED_DOMINANT;
+  const lineBreedIds = isAft ? [
+    'aft-tangerine', 'aft-jungle', 'aft-aberrant', 'aft-granite', 'aft-starburst', 'aft-calico'
+  ] : [
     'tangerine', 'hypo', 'shtct', 'emerine', 'bold-stripe', 
     'red-stripe', 'reverse-stripe', 'patternless-stripe', 'lavender', 'black-night'
   ];
+  const breedLevels = isAft ? ['Weak', 'Moderate', 'Strong', 'Excellent'] : ['Low', 'Medium', 'High'];
+  const currentVisualTraits = isAft ? AFT_VISUAL_TRAITS : VISUAL_TRAITS;
+  const currentPatternTraits = isAft ? AFT_PATTERN_TRAITS : PATTERN_TRAITS;
+
+  // Check if any albino is already selected
+  const selectedAlbino = Object.values(currentRecessive).find(g => 
+    g.group === 'albino' && (parent.visual.includes(g.id) || parent.hets.includes(g.id))
+  );
 
   return (
     <motion.div 
@@ -714,7 +796,7 @@ function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState;
               <span className="text-[10px] font-bold px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-lg uppercase">Requires 2 copies for Visual</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.values(RESTRICTED_RECESSIVE).map((gene: GeneDefinition) => {
+              {Object.values(currentRecessive).map((gene: GeneDefinition) => {
                 const isLocked = selectedAlbino && gene.group === 'albino' && selectedAlbino.id !== gene.id;
                 const isVisual = parent.visual.includes(gene.id);
                 const isHet = parent.hets.includes(gene.id);
@@ -739,6 +821,12 @@ function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState;
                         <div className="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700" />
                       )}
                     </div>
+                    {gene.warning && (
+                      <div className="flex items-start gap-1.5 mb-3 text-[9px] font-bold text-amber-600 uppercase bg-amber-50 dark:bg-amber-500/5 p-2 rounded-xl border border-amber-100 dark:border-amber-500/20 relative z-10">
+                        <AlertTriangle size={12} className="shrink-0 mt-0.5 text-amber-500" />
+                        <span>{gene.warning}</span>
+                      </div>
+                    )}
                     <div className="flex gap-2 relative z-10">
                       <button 
                         disabled={isLocked}
@@ -771,58 +859,68 @@ function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState;
             </div>
           </section>
 
-          {/* CO-DOMINANT GENES */}
+          {/* CO-DOMINANT / INCOMPLETE DOMINANT GENES */}
           <section className="space-y-6">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <RefreshCw size={16} className="text-amber-500" />
-                Co-Dominant (Visual / Super)
+                {isAft ? "Incomplete Dominant" : "Co-Dominant (Visual / Super)"}
               </h4>
-              <span className="text-[10px] font-bold px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded-lg uppercase">Variable Expression</span>
+              <span className="text-[10px] font-bold px-2 py-1 bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded-lg uppercase">
+                {isAft ? "Expressed in 1 Copy" : "Variable Expression"}
+              </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.values(RESTRICTED_CODOMINANT).map((gene: GeneDefinition) => {
-                const isVisual = parent.hets.includes(gene.id);
-                const isSuper = parent.visual.includes(gene.id);
+              {Object.values(currentCodominant)
+                .filter((gene: GeneDefinition) => !isAft || gene.id !== 'aft-stripe')
+                .map((gene: GeneDefinition) => {
+                  const isVisual = parent.hets.includes(gene.id);
+                  const isSuper = parent.visual.includes(gene.id);
 
-                return (
-                  <div key={gene.id} className={cn(
-                    "p-5 rounded-[2rem] border-2 transition-all",
-                    isVisual || isSuper
-                      ? "border-amber-500/30 bg-amber-50/30 dark:bg-amber-500/5 text-amber-600 shadow-xl shadow-amber-500/5 text-amber-600"
-                      : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30"
-                  )}>
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{gene.name}</span>
-                      <Sparkles size={14} className={isSuper ? "text-amber-500" : "text-slate-300"} />
+                  return (
+                    <div key={gene.id} className={cn(
+                      "p-5 rounded-[2rem] border-2 transition-all",
+                      isVisual || isSuper
+                        ? "border-amber-500/30 bg-amber-50/30 dark:bg-amber-500/5 text-amber-600 shadow-xl shadow-amber-500/5"
+                        : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30"
+                    )}>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{gene.name}</span>
+                        <Sparkles size={14} className={isSuper ? "text-amber-500" : "text-slate-300"} />
+                      </div>
+                      {gene.warning && (
+                        <div className="flex items-start gap-1.5 mb-3 text-[9px] font-bold text-amber-600 uppercase bg-amber-50 dark:bg-amber-500/5 p-2 rounded-xl border border-amber-100 dark:border-amber-500/20">
+                          <AlertTriangle size={12} className="shrink-0 mt-0.5 text-amber-500" />
+                          <span>{gene.warning}</span>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => onToggle(gene.id, 'visual')}
+                          className={cn(
+                            "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
+                            isVisual 
+                              ? "bg-emerald-500 text-white border-emerald-400 shadow-xl" 
+                              : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                          )}
+                        >
+                          Visual
+                        </button>
+                        <button 
+                          onClick={() => onToggle(gene.id, 'super')}
+                          className={cn(
+                            "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
+                            isSuper 
+                              ? "bg-amber-500 text-white border-amber-400 shadow-xl shadow-amber-500/20" 
+                              : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                          )}
+                        >
+                          Super
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => onToggle(gene.id, 'visual')}
-                        className={cn(
-                          "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
-                          isVisual 
-                            ? "bg-emerald-500 text-white border-emerald-400 shadow-xl" 
-                            : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                        )}
-                      >
-                        Visual
-                      </button>
-                      <button 
-                        onClick={() => onToggle(gene.id, 'super')}
-                        className={cn(
-                          "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
-                          isSuper 
-                            ? "bg-amber-500 text-white border-amber-400 shadow-xl shadow-amber-500/20" 
-                            : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                        )}
-                      >
-                        Super
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           </section>
 
@@ -831,42 +929,124 @@ function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState;
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <Zap size={16} className="text-blue-500" />
-                Dominant (Visual Only)
+                Dominant
               </h4>
-              <span className="text-[10px] font-bold px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-lg uppercase">Expressed in 1 Copy</span>
+              <span className="text-[10px] font-bold px-2 py-1 bg-blue-50 dark:bg-blue-500/10 text-blue-600 rounded-lg uppercase">
+                {isAft ? "Expressed in 1 Copy" : "Expressed in 1 Copy"}
+              </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {Object.values(RESTRICTED_DOMINANT).map((gene: GeneDefinition) => {
-                const isVisual = parent.hets.includes(gene.id);
-                return (
-                  <button 
-                    key={gene.id}
-                    onClick={() => onToggle(gene.id, 'visual')}
-                    className={cn(
-                      "p-6 rounded-[2rem] text-center border-2 transition-all relative group flex flex-col items-center gap-2",
-                      isVisual 
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 shadow-xl shadow-blue-500/20" 
-                        : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 text-slate-400 hover:border-blue-200"
-                    )}
-                  >
-                    <span className="text-[10px] font-black uppercase tracking-tight leading-tight">{gene.name}</span>
-                    {gene.warning ? (
-                      <AlertTriangle size={14} className="text-amber-500" />
-                    ) : (
-                      <Zap size={14} className={isVisual ? "text-blue-500" : "text-slate-200"} />
-                    )}
-                    {isVisual && (
-                      <motion.div 
-                        layoutId="active-check"
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900"
+            
+            {isAft ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Custom Stripe Render under Dominant section */}
+                {(() => {
+                  const stripeGene = currentCodominant['aft-stripe'];
+                  if (!stripeGene) return null;
+                  const isVisual = parent.hets.includes(stripeGene.id);
+                  const isSuper = parent.visual.includes(stripeGene.id);
+
+                  return (
+                    <div className={cn(
+                      "p-5 rounded-[2rem] border-2 transition-all",
+                      isVisual || isSuper
+                        ? "border-amber-500/30 bg-amber-50/30 dark:bg-amber-500/5 text-amber-600 shadow-xl shadow-amber-500/5"
+                        : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30"
+                    )}>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{stripeGene.name}</span>
+                        <Sparkles size={14} className={isSuper ? "text-amber-500" : "text-slate-300"} />
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => onToggle(stripeGene.id, 'visual')}
+                          className={cn(
+                            "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
+                            isVisual 
+                              ? "bg-emerald-500 text-white border-emerald-400 shadow-xl" 
+                              : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                          )}
+                        >
+                          Visual
+                        </button>
+                        <button 
+                          onClick={() => onToggle(stripeGene.id, 'super')}
+                          className={cn(
+                            "flex-1 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
+                            isSuper 
+                              ? "bg-amber-500 text-white border-amber-400 shadow-xl shadow-amber-500/20" 
+                              : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                          )}
+                        >
+                          Super
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Custom Banded Render */}
+                {Object.values(currentDominant).map((gene: GeneDefinition) => {
+                  const isVisual = parent.hets.includes(gene.id);
+                  return (
+                    <div key={gene.id} className={cn(
+                      "p-5 rounded-[2rem] border-2 transition-all flex flex-col justify-between",
+                      isVisual
+                        ? "border-blue-500/30 bg-blue-50/30 dark:bg-blue-500/5 text-blue-600 shadow-xl shadow-blue-500/5"
+                        : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30"
+                    )}>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{gene.name}</span>
+                        <Zap size={14} className={isVisual ? "text-blue-500" : "text-slate-300"} />
+                      </div>
+                      <button 
+                        onClick={() => onToggle(gene.id, 'visual')}
+                        className={cn(
+                          "w-full py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm border-2",
+                          isVisual 
+                            ? "bg-blue-500 text-white border-blue-400 shadow-xl" 
+                            : "bg-white dark:bg-slate-800 text-slate-400 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        )}
                       >
-                        <Plus size={10} className="rotate-45" />
-                      </motion.div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                        Visual
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {Object.values(currentDominant).map((gene: GeneDefinition) => {
+                  const isVisual = parent.hets.includes(gene.id);
+                  return (
+                    <button 
+                      key={gene.id}
+                      onClick={() => onToggle(gene.id, 'visual')}
+                      className={cn(
+                        "p-6 rounded-[2rem] text-center border-2 transition-all relative group flex flex-col items-center gap-2",
+                        isVisual 
+                          ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 shadow-xl shadow-blue-500/20" 
+                          : "border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 text-slate-400 hover:border-blue-200"
+                      )}
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-tight leading-tight">{gene.name}</span>
+                      {gene.warning ? (
+                        <AlertTriangle size={14} className="text-amber-500" />
+                      ) : (
+                        <Zap size={14} className={isVisual ? "text-blue-500" : "text-slate-200"} />
+                      )}
+                      {isVisual && (
+                        <motion.div 
+                          layoutId="active-check"
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900"
+                        >
+                          <Plus size={10} className="rotate-45" />
+                        </motion.div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* LINE-BREED TRAITS */}
@@ -876,11 +1056,13 @@ function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState;
                 <Target size={16} className="text-indigo-500" />
                 Line-Breed Selection
               </h4>
-              <span className="text-[10px] font-bold px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-lg uppercase">Select Level (Low/Medium/High)</span>
+              <span className="text-[10px] font-bold px-2 py-1 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 rounded-lg uppercase">
+                Select Level ({isAft ? "Weak/Moderate/Strong/Excellent" : "Low/Medium/High"})
+              </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {LINE_BREED_IDS.map((id) => {
-                const trait = VISUAL_TRAITS[id] || PATTERN_TRAITS[id];
+              {lineBreedIds.map((id) => {
+                const trait = currentVisualTraits[id] || currentPatternTraits[id];
                 if (!trait) return null;
                 const currentLevel = parent.traitLevels?.[id];
                 const isSelected = !!currentLevel;
@@ -897,7 +1079,7 @@ function SelectionOverlay({ parent, onClose, onToggle }: { parent: GeneticState;
                       <Target size={14} className={isSelected ? "text-indigo-500" : "text-slate-300"} />
                     </div>
                     <div className="flex gap-2">
-                      {['Low', 'Medium', 'High'].map((lvl) => (
+                      {breedLevels.map((lvl) => (
                         <button 
                           key={lvl}
                           onClick={() => onToggle(id, 'linebred', lvl)}

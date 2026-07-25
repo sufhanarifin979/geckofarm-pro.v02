@@ -7,7 +7,10 @@ import {
   ChevronRight, 
   Activity,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  Flame,
+  Crown
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
@@ -17,6 +20,7 @@ import PremiumModal from './PremiumModal';
 import Analytics from './Analytics';
 
 import { useGeckos } from '../GeckoProvider';
+import { useNotifications } from '../context/NotificationContext';
 
 interface DashboardProps {
   profile: UserProfile | null;
@@ -24,6 +28,8 @@ interface DashboardProps {
 
 export default function Dashboard({ profile }: DashboardProps) {
   const { geckos } = useGeckos();
+  const { upcomingHatchCount, reminders, premiumDaysLeft } = useNotifications();
+  const activeRemindersCount = reminders.length;
   const [stats, setStats] = useState({
     totalGeckos: 0,
     activePairings: 0,
@@ -100,6 +106,75 @@ export default function Dashboard({ profile }: DashboardProps) {
           <Plus size={24} className="mb-2 group-hover:rotate-90 transition-transform text-emerald-400" />
           <div className="text-[10px] font-black uppercase tracking-widest">New Registry</div>
         </Link>
+      </div>
+
+      {/* Smart Reminders Summary Widget */}
+      <div className="bg-slate-50 rounded-3xl border border-slate-200/85 p-6 shadow-sm flex flex-col gap-4">
+        <div>
+          <h3 className="text-xs font-black uppercase text-slate-600 tracking-widest leading-none">Smart Reminders Overview</h3>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Real-time status updates for your breeding operations</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Upcoming Hatch */}
+          <div className="bg-white p-4 rounded-xl border border-slate-150 flex items-center justify-between group shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Flame size={18} className="animate-pulse" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Upcoming Hatch (≤ 3 Days)</p>
+                <h4 className="text-lg font-black text-slate-800 leading-none mt-1">{upcomingHatchCount} Clutches</h4>
+              </div>
+            </div>
+            <Link to="/incubator" className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-700 transition-colors">
+              <ChevronRight size={16} />
+            </Link>
+          </div>
+
+          {/* Active Reminder */}
+          <div className="bg-white p-4 rounded-xl border border-slate-150 flex items-center justify-between group shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform relative">
+                <Bell size={18} />
+                {activeRemindersCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white" />
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Active Reminders</p>
+                <h4 className="text-lg font-black text-slate-800 leading-none mt-1">{activeRemindersCount} Alerts</h4>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                const btn = document.getElementById('notif-bell-button');
+                if (btn) btn.click();
+              }}
+              className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {/* Premium Days Left */}
+          <div className="bg-white p-4 rounded-xl border border-slate-150 flex items-center justify-between group shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center group-hover:scale-105 transition-transform">
+                <Crown size={18} />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">Premium License</p>
+                <h4 className="text-lg font-black text-slate-800 leading-none mt-1">
+                  {profile?.subscription === 'premium' ? `${premiumDaysLeft} Days Left` : 'Free Tier'}
+                </h4>
+              </div>
+            </div>
+            <Link to="/settings" className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-700 transition-colors">
+              <ChevronRight size={16} />
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Analytics Section */}

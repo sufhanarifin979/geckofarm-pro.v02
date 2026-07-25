@@ -77,7 +77,58 @@ export const PATTERN_TRAITS: Record<string, TraitDefinition> = {
   'bandit': { name: 'Bandit', description: 'Nose band pattern', type: 'line-bred' },
 };
 
-export const ALL_GENES = { ...CORE_GENES, ...SPECIAL_GENES };
+export const AFT_CORE_GENES: Record<string, GeneDefinition> = {
+  'aft-oreo': { id: 'aft-oreo', name: 'Oreo', type: 'recessive' },
+  'aft-patternless': { id: 'aft-patternless', name: 'Patternless', type: 'recessive' },
+  'aft-ghost': { id: 'aft-ghost', name: 'Ghost', type: 'recessive', warning: 'Ghost females may become infertile.' },
+  'aft-caramel': { id: 'aft-caramel', name: 'Caramel', type: 'recessive', warning: 'Caramel females may become infertile.' },
+  'aft-amelanistic': { id: 'aft-amelanistic', name: 'Amelanistic', type: 'recessive' },
+  'aft-zulu': { id: 'aft-zulu', name: 'Zulu', type: 'recessive' },
+  'aft-stinger': { id: 'aft-stinger', name: 'Stinger', type: 'recessive' },
+  'aft-zero': { id: 'aft-zero', name: 'Zero', type: 'recessive' },
+  'aft-whiteout': { id: 'aft-whiteout', name: 'Whiteout', type: 'codominant', super_form: 'aft-super-whiteout', warning: 'Pairing Whiteout x Whiteout produces 25% lethal Super Whiteout.' },
+  'aft-super-whiteout': { id: 'aft-super-whiteout', name: 'Super Whiteout (Lethal)', type: 'special', isSpecial: true, warning: 'Lethal combination! Super Whiteout is lethal.' },
+  'aft-stripe': { id: 'aft-stripe', name: 'Stripe', type: 'codominant', super_form: 'aft-super-stripe' },
+  'aft-super-stripe': { id: 'aft-super-stripe', name: 'Super Stripe', type: 'special' },
+  'aft-banded': { id: 'aft-banded', name: 'Banded', type: 'dominant' },
+};
+
+export const AFT_VISUAL_TRAITS: Record<string, TraitDefinition> = {
+  'aft-tangerine': { name: 'Tangerine', description: 'Orange basic pigment', type: 'line-bred' },
+  'aft-starburst': { name: 'Starburst', description: 'Starburst high intensity color', type: 'line-bred' },
+};
+
+export const AFT_PATTERN_TRAITS: Record<string, TraitDefinition> = {
+  'aft-jungle': { name: 'Jungle', description: 'Jungle pattern', type: 'line-bred' },
+  'aft-aberrant': { name: 'Aberrant', description: 'Aberrant pattern', type: 'line-bred' },
+  'aft-granite': { name: 'Granite', description: 'Granite pattern speckling', type: 'line-bred' },
+  'aft-calico': { name: 'Calico', description: 'Calico pigmentation pattern', type: 'line-bred' },
+};
+
+export const AFT_COMBO_MAPPING: COMBO_ENTRY[] = [
+  { genes: ['aft-whiteout', 'aft-oreo'], name: 'Whiteout Oreo', rarity: 'Rare' },
+  { genes: ['aft-whiteout', 'aft-zulu'], name: 'Whiteout Zulu', rarity: 'Rare' },
+  { genes: ['aft-whiteout', 'aft-patternless'], name: 'Whiteout Patternless', rarity: 'Rare' },
+  { genes: ['aft-whiteout', 'aft-amelanistic'], name: 'Whiteout Amelanistic', rarity: 'Rare' },
+  { genes: ['aft-whiteout', 'aft-caramel'], name: 'Whiteout Caramel', rarity: 'Rare' },
+  { genes: ['aft-whiteout', 'aft-ghost'], name: 'Whiteout Ghost', rarity: 'Rare' },
+  { genes: ['aft-oreo', 'aft-zulu'], name: 'Oreo Zulu', rarity: 'Legendary' },
+  { genes: ['aft-oreo', 'aft-patternless'], name: 'Oreo Patternless', rarity: 'Legendary' },
+  { genes: ['aft-zulu', 'aft-patternless'], name: 'Zulu Patternless', rarity: 'Legendary' },
+  { genes: ['aft-amelanistic', 'aft-oreo'], name: 'Snow', rarity: 'Rare' },
+  { genes: ['aft-caramel', 'aft-oreo'], name: 'Caramel Snow', rarity: 'Rare' },
+  { genes: ['aft-ghost', 'aft-oreo', 'aft-patternless'], name: 'Purple Haze', rarity: 'Legendary' },
+  { genes: ['aft-patternless', 'aft-stinger', 'aft-stripe'], name: 'Super Zero', rarity: 'Legendary' },
+  { genes: ['aft-patternless', 'aft-stinger'], name: 'Super Stinger', rarity: 'Rare' },
+  { genes: ['aft-stinger', 'aft-stripe'], name: 'Zero', rarity: 'Rare' },
+  { genes: ['aft-whiteout', 'aft-oreo', 'aft-zulu'], name: 'Whiteout Oreo Zulu', rarity: 'Holy Grail' },
+  { genes: ['aft-whiteout', 'aft-oreo', 'aft-patternless'], name: 'Whiteout Oreo Patternless', rarity: 'Holy Grail' },
+];
+
+export const ALL_GENES = { ...CORE_GENES, ...SPECIAL_GENES, ...AFT_CORE_GENES };
+
+Object.assign(VISUAL_TRAITS, AFT_VISUAL_TRAITS);
+Object.assign(PATTERN_TRAITS, AFT_PATTERN_TRAITS);
 
 export interface COMBO_ENTRY {
   genes: string[];
@@ -149,11 +200,24 @@ export interface PredictionResult {
   };
 }
 
-export function calculatePairing(parentA: GeneticState, parentB: GeneticState): PredictionResult[] {
+export function calculatePairing(parentA: GeneticState, parentB: GeneticState, species: 'Leopard Gecko' | 'African Fat-Tailed Gecko' = 'Leopard Gecko'): PredictionResult[] {
   const genesInvolved = Array.from(new Set([
     ...parentA.visual, ...parentA.hets,
     ...parentB.visual, ...parentB.hets
   ])).filter(id => ALL_GENES[id]);
+
+  // Species mismatch validation
+  const hasLeopardGenesA = parentA.visual.some(id => !id.startsWith('aft-')) || parentA.hets.some(id => !id.startsWith('aft-'));
+  const hasAftGenesA = parentA.visual.some(id => id.startsWith('aft-')) || parentA.hets.some(id => id.startsWith('aft-'));
+  const hasLeopardGenesB = parentB.visual.some(id => !id.startsWith('aft-')) || parentB.hets.some(id => !id.startsWith('aft-'));
+  const hasAftGenesB = parentB.visual.some(id => id.startsWith('aft-')) || parentB.hets.some(id => id.startsWith('aft-'));
+
+  const isParentA_AFT = hasAftGenesA || (species === 'African Fat-Tailed Gecko' && !hasLeopardGenesA);
+  const isParentB_AFT = hasAftGenesB || (species === 'African Fat-Tailed Gecko' && !hasLeopardGenesB);
+
+  if (isParentA_AFT !== isParentB_AFT) {
+    throw new Error('MISMATCHED_SPECIES');
+  }
 
   if (genesInvolved.length === 0 && 
       parentA.visualTraits.length === 0 && parentB.visualTraits.length === 0 &&
@@ -319,6 +383,55 @@ function generateTraitProfile(visualGenes: string[], visualTraits: string[], pat
 export function generateBreederInsight(result: PredictionResult): string {
   const { visualGenes, visualTraits, patternTraits, rarity, hets } = result;
   
+  const isAft = [...visualGenes, ...visualTraits, ...patternTraits].some(g => g.startsWith('aft-'));
+  if (isAft) {
+    const hasWhiteout = visualGenes.includes('aft-whiteout') || visualGenes.includes('aft-super-whiteout');
+    const hasOreo = visualGenes.includes('aft-oreo');
+    const hasZulu = visualGenes.includes('aft-zulu');
+    const hasPatternless = visualGenes.includes('aft-patternless');
+    const hasStinger = visualGenes.includes('aft-stinger');
+    const hasZero = visualGenes.includes('aft-zero');
+    const hasGhost = visualGenes.includes('aft-ghost');
+    const hasCaramel = visualGenes.includes('aft-caramel');
+    const hasAmelanistic = visualGenes.includes('aft-amelanistic');
+    
+    const relevantAftPhrases: string[] = [];
+    
+    if (hasWhiteout) {
+      relevantAftPhrases.push("pengaruh Whiteout memberikan kontras lateral yang menakjubkan dengan white-sided patterning.");
+    }
+    if (hasOreo && hasAmelanistic) {
+      relevantAftPhrases.push("kombinasi Oreo dan Amelanistic menghasilkan visual Snow yang sangat dicari oleh breeder.");
+    }
+    if (hasGhost) {
+      relevantAftPhrases.push("gen Ghost menghadirkan rona pastel hipomelanistik yang sangat bersih, namun perhatikan manajemen fertilitas betina.");
+    }
+    if (hasCaramel) {
+      relevantAftPhrases.push("saturasi warna Caramel Albino memberikan rona kecokelatan hangat yang sangat eksotis.");
+    }
+    if (hasZulu) {
+      relevantAftPhrases.push("gen Zulu memberikan pola panah (chevron) yang unik pada ekor dan kontras dorsal yang sangat tajam.");
+    }
+    if (hasPatternless) {
+      relevantAftPhrases.push("pola Patternless yang bersih akan mengeleminasi pola pita (banded) standar untuk tampilan visual solid.");
+    }
+    
+    if (relevantAftPhrases.length === 0) {
+      relevantAftPhrases.push("pairing ini menjaga kemurnian silsilah dan stabilitas visual yang sangat baik.");
+    }
+    
+    const openers = [
+      "Dari sudut pandang breeder AFT profesional,",
+      "Berdasarkan silsilah genetika African Fat-Tailed Gecko ini,",
+      "Hasil breeding ini menunjukkan bahwa",
+      "Kombinasi genetik AFT ini menawarkan",
+      "Secara profesional,"
+    ];
+    
+    const opener = openers[Math.floor(Math.random() * openers.length)];
+    return opener + " " + relevantAftPhrases.join(" Selain itu, ") + ".";
+  }
+
   const hasAlbino = visualGenes.some(v => ALL_GENES[v]?.group === 'albino');
   const hasEclipse = visualGenes.includes('eclipse');
   const hasSnow = visualGenes.includes('mack-snow') || visualGenes.includes('super-snow');
@@ -427,6 +540,26 @@ export function generateBreederInsight(result: PredictionResult): string {
 }
 
 function generateVisualPrediction(traits: string[], patterns: string[], levels: Record<string, string> = {}, visuals: string[] = []) {
+  const isAft = [...traits, ...patterns, ...visuals].some(g => g.startsWith('aft-'));
+  
+  if (isAft) {
+    const hasOrange = traits.includes('aft-tangerine') || traits.includes('aft-starburst');
+    const hasGranite = patterns.includes('aft-granite');
+    const hasCalico = patterns.includes('aft-calico');
+    const hasWhiteout = visuals.includes('aft-whiteout');
+    const hasStripe = visuals.includes('aft-stripe') || visuals.includes('aft-super-stripe');
+    
+    return {
+      intensity: hasOrange ? 'High Intensity Orange Pigment' : 'Standard Natural Tone',
+      pattern: hasStripe ? 'Strong Dorsal Striping' : (patterns.includes('aft-jungle') ? 'Disruptive Jungle Banding' : 'Banded Pattern'),
+      contrast: hasWhiteout || hasCalico ? 'High Contrast White-Sided Expression' : 'Balanced Mid-Tone',
+      spotting: hasGranite ? 'High Density Granite Speckling' : 'Clean / Clear Skin',
+      saturation: hasOrange ? 'Vibrant Orange Saturation' : 'Neutral Pigmentation',
+      melanistic: 'Low Melanistic Hue',
+      eyeAppearance: 'Standard Veined Iris'
+    };
+  }
+
   const hasOrange = traits.some(t => ['tangerine', 'blood', 'inferno'].includes(t));
   const hasMelanistic = traits.includes('black-night');
   const hasWY = visuals.includes('white-yellow');
@@ -446,17 +579,29 @@ function generateVisualPrediction(traits: string[], patterns: string[], levels: 
 
 function recognizeCombo(visualGenes: string[], visualTraits: string[] = []): { name: string, primaryName: string, rarity: COMBO_ENTRY['rarity'], matchedGenes: string[] } {
   const allVisuals = [...visualGenes, ...visualTraits];
-  const sortedCombos = [...COMBO_MAPPING].sort((a, b) => b.genes.length - a.genes.length);
+  const isAft = allVisuals.some(g => g.startsWith('aft-'));
+  const checkVisuals = isAft ? allVisuals.map(g => g === 'aft-super-stripe' ? 'aft-stripe' : g) : allVisuals;
+  const currentCombos = isAft ? AFT_COMBO_MAPPING : COMBO_MAPPING;
+  const sortedCombos = [...currentCombos].sort((a, b) => b.genes.length - a.genes.length);
   
   for (const combo of sortedCombos) {
-    if (combo.genes.every(g => allVisuals.includes(g))) {
-      const remainingGenes = visualGenes.filter(g => !combo.genes.includes(g));
+    if (combo.genes.every(g => checkVisuals.includes(g))) {
+      const matchedGenesInOutput = combo.genes.map(g => {
+        if (g === 'aft-stripe' && allVisuals.includes('aft-super-stripe')) return 'aft-super-stripe';
+        return g;
+      });
+      const remainingGenes = visualGenes.filter(g => !matchedGenesInOutput.includes(g));
       let name = combo.name;
+      
+      if (matchedGenesInOutput.includes('aft-super-stripe') && !name.toLowerCase().includes('super')) {
+        name = `Super Stripe ${name}`;
+      }
+      
       if (remainingGenes.length > 0) {
         const extraNames = remainingGenes.map(g => ALL_GENES[g]?.name).filter(Boolean).join(' ');
         name = `${extraNames} ${name}`;
       }
-      return { name, primaryName: combo.name, rarity: combo.rarity, matchedGenes: combo.genes };
+      return { name, primaryName: combo.name, rarity: combo.rarity, matchedGenes: matchedGenesInOutput };
     }
   }
 
@@ -489,6 +634,17 @@ function determineValue(genes: string[], traits: string[]): 'Standard' | 'Premiu
 
 function checkHealth(traits: string[]) {
   const warnings = traits.map(t => ALL_GENES[t]?.warning).filter(Boolean);
+  
+  if (traits.includes('aft-ghost')) {
+    warnings.push('⚠ Ghost females may become infertile.');
+  }
+  if (traits.includes('aft-caramel')) {
+    warnings.push('⚠ Caramel females may become infertile.');
+  }
+  if (traits.includes('aft-super-whiteout')) {
+    warnings.push('⚠ White Out x White Out may produce lethal Super White Out. Avoid pairing for lethal combinations.');
+  }
+
   if (warnings.length > 0) {
     return { 
       isWarning: true, 

@@ -212,6 +212,7 @@ export default function Encyclopedia() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterRarity, setFilterRarity] = useState<string>('all');
   const [selectedMorph, setSelectedMorph] = useState<MorphEntry | null>(null);
+  const [activeSpecies, setActiveSpecies] = useState<'Leopard Gecko' | 'African Fat-Tailed Gecko'>('Leopard Gecko');
 
   useEffect(() => {
     // 1. Try memory cache first
@@ -274,14 +275,18 @@ export default function Encyclopedia() {
       const matchesCategory = filterCategory === 'all' || m.category === filterCategory;
       const matchesRarity = filterRarity === 'all' || m.rarity === filterRarity;
       
-      return matchesSearch && matchesCategory && matchesRarity;
+      const mSpecies = (m as any).species || 'Leopard Gecko';
+      const matchesSpecies = mSpecies === activeSpecies;
+      
+      return matchesSearch && matchesCategory && matchesRarity && matchesSpecies;
     });
-  }, [morphs, searchQuery, filterCategory, filterRarity]);
+  }, [morphs, searchQuery, filterCategory, filterRarity, activeSpecies]);
 
   const categories = useMemo(() => {
-    const cats = new Set(morphs.map(m => m.category));
+    const filteredForCats = morphs.filter(m => ((m as any).species || 'Leopard Gecko') === activeSpecies);
+    const cats = new Set(filteredForCats.map(m => m.category));
     return Array.from(cats);
-  }, [morphs]);
+  }, [morphs, activeSpecies]);
 
   if (loading) {
      return (
@@ -302,6 +307,36 @@ export default function Encyclopedia() {
 
   return (
     <div className="space-y-8 pb-20">
+      {/* Species Tabs */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 pb-1 gap-6">
+        <button
+          onClick={() => {
+            setActiveSpecies('Leopard Gecko');
+            setFilterCategory('all');
+          }}
+          className={`pb-3 text-xs sm:text-sm font-black uppercase tracking-widest relative transition-colors ${
+            activeSpecies === 'Leopard Gecko'
+              ? 'text-emerald-500 border-b-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          Leopard Gecko
+        </button>
+        <button
+          onClick={() => {
+            setActiveSpecies('African Fat-Tailed Gecko');
+            setFilterCategory('all');
+          }}
+          className={`pb-3 text-xs sm:text-sm font-black uppercase tracking-widest relative transition-colors ${
+            activeSpecies === 'African Fat-Tailed Gecko'
+              ? 'text-emerald-500 border-b-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+          }`}
+        >
+          African Fat-Tailed Gecko
+        </button>
+      </div>
+
       {/* Search & Filter Bar */}
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
         <div className="relative w-full lg:max-w-xl group">

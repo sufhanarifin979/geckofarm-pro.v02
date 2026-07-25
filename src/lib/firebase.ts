@@ -297,10 +297,43 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
          needsUpdate = true;
       }
   
-      if (isAutoPremium && (rawData.subscription !== 'premium' || (rawData.planLimit || 0) < 10000)) {
+      if (isAutoPremium && (rawData.subscription !== 'premium' || (rawData.planLimit || 0) < 10000 || !rawData.premiumExpiresAt)) {
          updates.subscription = 'premium';
          updates.planLimit = 10000;
+         if (!rawData.premiumExpiresAt) {
+           const now = new Date();
+           updates.premiumActivatedAt = now;
+           // Set to expire in 365 days
+           updates.premiumExpiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+         }
          needsUpdate = true;
+      }
+
+      // Automatic premium subscription expiry check
+      const currentSub = updates.subscription !== undefined ? updates.subscription : rawData.subscription;
+      const currentExpiresAt = updates.premiumExpiresAt !== undefined ? updates.premiumExpiresAt : rawData.premiumExpiresAt;
+
+      if (currentSub === 'premium' && currentExpiresAt) {
+        let expiryDate: Date | null = null;
+        if (typeof currentExpiresAt.toDate === 'function') {
+          expiryDate = currentExpiresAt.toDate();
+        } else if (currentExpiresAt.seconds !== undefined) {
+          expiryDate = new Date(currentExpiresAt.seconds * 1000);
+        } else {
+          expiryDate = new Date(currentExpiresAt);
+        }
+
+        if (expiryDate && !isNaN(expiryDate.getTime()) && expiryDate.getTime() <= Date.now()) {
+          updates.subscription = 'free';
+          updates.planLimit = 10;
+          updates.premiumActivatedAt = null;
+          updates.premiumExpiresAt = null;
+          needsUpdate = true;
+          try {
+            localStorage.setItem(`premium_expired_notified_${user.uid}`, 'true');
+          } catch (e) {}
+          console.log("Premium subscription expired for user:", user.uid);
+        }
       }
   
       let finalProfile: UserProfile;
@@ -321,6 +354,7 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
       return finalProfile;
     } else {
       console.log("No profile found, creating new one for:", user.email);
+      const now = new Date();
       const newUserProfile: Omit<UserProfile, 'uid'> = {
         email: user.email || '',
         farmName: 'My Gecko Farm',
@@ -329,7 +363,9 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
         geckoCount: 0,
         pairingCount: 0,
         clutchCount: 0,
-        planLimit: isAutoPremium ? 10000 : 10
+        planLimit: isAutoPremium ? 10000 : 10,
+        premiumActivatedAt: isAutoPremium ? now : null,
+        premiumExpiresAt: isAutoPremium ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) : null
       };
       try {
         await setDoc(userDocRef, newUserProfile);
@@ -350,6 +386,7 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
     }
 
     const isAutoPremium = user.email === 'sufhan.arifin979@gmail.com';
+    const now = new Date();
     const fallbackProfile: UserProfile = {
       uid: user.uid,
       email: user.email || '',
@@ -359,7 +396,9 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
       geckoCount: 0,
       pairingCount: 0,
       clutchCount: 0,
-      planLimit: isAutoPremium ? 10000 : 10
+      planLimit: isAutoPremium ? 10000 : 10,
+      premiumActivatedAt: isAutoPremium ? now : null,
+      premiumExpiresAt: isAutoPremium ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) : null
     };
     
     // Save fallback to cache so we don't query Firestore again in subsequent renders/checks

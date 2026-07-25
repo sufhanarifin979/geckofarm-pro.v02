@@ -292,6 +292,7 @@ export default function Export({ profile }: ExportProps) {
     const data = geckos.map((g, index) => ({
       'No': index + 1,
       'Nama': g.name,
+      'Spesies': g.species || 'Leopard Gecko',
       'Morph': g.morph,
       'Jenis Kelamin': g.gender === 'male' ? 'M' : g.gender === 'female' ? 'F' : 'U',
       'Tanggal Lahir': g.birthDate,
@@ -310,6 +311,7 @@ export default function Export({ profile }: ExportProps) {
     const wscols = [
       { wch: 5 },  // No
       { wch: 15 }, // Nama
+      { wch: 20 }, // Spesies
       { wch: 25 }, // Morph
       { wch: 10 }, // Gender
       { wch: 15 }, // Birth
@@ -369,6 +371,7 @@ export default function Export({ profile }: ExportProps) {
     const tableData = geckos.map((g, index) => [
       index + 1,
       g.name || '-',
+      g.species || 'Leopard Gecko',
       g.morph || '-',
       g.gender === 'male' ? 'Male' : g.gender === 'female' ? 'Female' : 'Unknown',
       g.birthDate || '-',
@@ -381,7 +384,7 @@ export default function Export({ profile }: ExportProps) {
 
     autoTable(doc, {
       startY: 50,
-      head: [['#', 'GECKO NAME', 'MORPH / GENOTYPE', 'SEX', 'HATCH DATE', 'STATUS', 'WEIGHT', 'PROJECT', 'SIRE', 'DAM']],
+      head: [['#', 'GECKO NAME', 'SPECIES', 'MORPH / GENOTYPE', 'SEX', 'HATCH DATE', 'STATUS', 'WEIGHT', 'PROJECT', 'SIRE', 'DAM']],
       body: tableData,
       theme: 'grid',
       headStyles: {
@@ -402,15 +405,16 @@ export default function Export({ profile }: ExportProps) {
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 8 },
-        1: { fontStyle: 'bold', cellWidth: 32 },
-        2: { cellWidth: 48 },
-        3: { halign: 'center', cellWidth: 15 },
-        4: { halign: 'center', cellWidth: 22 },
-        5: { halign: 'center', cellWidth: 18 },
-        6: { halign: 'center', cellWidth: 15 },
-        7: { cellWidth: 25 },
-        8: { cellWidth: 25 },
-        9: { cellWidth: 25 }
+        1: { fontStyle: 'bold', cellWidth: 25 },
+        2: { halign: 'center', cellWidth: 25 }, // SPECIES
+        3: { cellWidth: 35 },
+        4: { halign: 'center', cellWidth: 15 },
+        5: { halign: 'center', cellWidth: 20 },
+        6: { halign: 'center', cellWidth: 18 },
+        7: { halign: 'center', cellWidth: 15 },
+        8: { cellWidth: 22 },
+        9: { cellWidth: 22 },
+        10: { cellWidth: 22 }
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252] 

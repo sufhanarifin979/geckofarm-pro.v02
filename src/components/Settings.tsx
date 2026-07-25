@@ -9,7 +9,8 @@ import {
   User,
   Info,
   LogOut,
-  Phone
+  Phone,
+  Bell
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { db, signOut } from '../lib/firebase';
@@ -17,6 +18,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { compressImage, uploadFarmImage } from '../lib/imageUtils';
 import PremiumModal from './PremiumModal';
 import LegalModal from './LegalModal';
+import { useNotifications } from '../context/NotificationContext';
 
 interface SettingsProps {
   profile: UserProfile | null;
@@ -24,6 +26,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ profile, setProfile }: SettingsProps) {
+  const { settings, updateSettings, premiumDaysLeft } = useNotifications();
   const [formData, setFormData] = useState({
     farmName: profile?.farmName || '',
     farmPhotoUrl: profile?.farmPhotoUrl || ''
@@ -194,6 +197,124 @@ export default function Settings({ profile, setProfile }: SettingsProps) {
               </button>
             </div>
           </form>
+
+          {/* Notification Settings */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-8">
+            <div className="p-8 space-y-6">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Bell size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase text-slate-800 tracking-widest leading-none">Notification Settings</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Configure your breeder alert preferences</p>
+                </div>
+              </div>
+
+              <div className="divide-y divide-slate-100">
+                {/* Hatch Reminder */}
+                <div className="py-4 flex items-center justify-between">
+                  <div className="pr-4">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Hatch Reminder</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                      Get notified when clutches are estimated to hatch today, soon (≤ 3 days), are overdue, or active pairings lack clutches.
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => updateSettings({ hatchReminder: !settings.hatchReminder })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      settings.hatchReminder ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.hatchReminder ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Candle Reminder */}
+                <div className="py-4 flex items-center justify-between">
+                  <div className="pr-4">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Candle & Incubation Milestone Reminder</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                      Receive alerts on incubation days 7, 14, 21, 30, and 45 to candle eggs, and milestone achievements.
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => updateSettings({ candleReminder: !settings.candleReminder })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      settings.candleReminder ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.candleReminder ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Premium Reminder */}
+                <div className="py-4 flex items-center justify-between">
+                  <div className="pr-4">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Premium Reminder</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                      Keep track of your subscription with gentle alerts before your premium license expires.
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => updateSettings({ premiumReminder: !settings.premiumReminder })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      settings.premiumReminder ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.premiumReminder ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Finance Reminder */}
+                <div className="py-4 flex items-center justify-between">
+                  <div className="pr-4">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Finance Reminder</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                      Get a gentle monthly nudge to log your transactions and keep your farm financial health sheet updated.
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => updateSettings({ financeReminder: !settings.financeReminder })}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      settings.financeReminder ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings.financeReminder ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Future Push Notification Placeholder */}
+                <div className="py-4 flex items-center justify-between opacity-50 select-none">
+                  <div className="pr-4">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-tight">Future Push Notifications (Beta)</h4>
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed mt-0.5">
+                      Enable browser-native background push messages. Coming soon in next stable release.
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    disabled
+                    className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-slate-100 cursor-not-allowed"
+                  >
+                    <span className="inline-block h-4 w-4 transform rounded-full bg-slate-350 translate-x-1" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -234,9 +355,20 @@ export default function Settings({ profile, setProfile }: SettingsProps) {
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 mt-4 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                <div className="flex flex-col items-center gap-2 mt-4 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-center">
                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Premium Status Active</p>
-                  <p className="text-[9px] text-emerald-400/60 uppercase font-bold tracking-widest">Lifetime License</p>
+                  <p className="text-sm text-emerald-300 font-bold tracking-wide mt-1">
+                    {premiumDaysLeft} Hari lagi
+                  </p>
+                  {profile?.premiumExpiresAt && (
+                    <p className="text-[8px] text-white/50 uppercase font-semibold tracking-wider">
+                      S/D {(() => {
+                        const exp = profile.premiumExpiresAt;
+                        const d = exp.toDate ? exp.toDate() : (exp.seconds ? new Date(exp.seconds * 1000) : new Date(exp));
+                        return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                      })()}
+                    </p>
+                  )}
                 </div>
               )}
           </div>
