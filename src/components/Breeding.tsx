@@ -29,8 +29,9 @@ import { Gecko, Pairing, Clutch, UserProfile } from '../types';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch, increment } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, formatDate } from '../lib/utils';
+import { cn, formatDate, getParentLineageDisplay } from '../lib/utils';
 import ConfirmationModal from './ConfirmationModal';
+import BreedingParentSelect from './BreedingParentSelect';
 
 interface BreedingProps {
   profile: UserProfile | null;
@@ -108,23 +109,39 @@ export default function Breeding({ profile }: BreedingProps) {
       const sireGecko = geckos.find(g => g.id === formData.sireId);
       const damGecko = geckos.find(g => g.id === formData.damId);
       
-      const sireSpecies = sireGecko?.species || 'Leopard Gecko';
-      const damSpecies = damGecko?.species || 'Leopard Gecko';
+      const finalSireName = (formData.sireName || sireGecko?.name || '').trim();
+      const finalDamName = (formData.damName || damGecko?.name || '').trim();
+      const finalSireMorph = (sireGecko?.morph || '').trim();
+      const finalDamMorph = (damGecko?.morph || '').trim();
 
-      if (sireSpecies !== damSpecies) {
-        alert(`Mismatched species! Sire (${sireGecko?.name}) adalah ${sireSpecies}, sedangkan Dam (${damGecko?.name}) adalah ${damSpecies}. Pairing hanya diperbolehkan untuk spesies yang sama.`);
+      if (!finalSireName) {
+        alert('Silakan pilih atau masukkan nama Sire (Pejantan).');
+        return;
+      }
+      if (!finalDamName) {
+        alert('Silakan pilih atau masukkan nama Dam (Betina).');
         return;
       }
 
-      const pairingSpecies = sireSpecies;
+      const sireSpecies = sireGecko?.species || 'Leopard Gecko';
+      const damSpecies = damGecko?.species || 'Leopard Gecko';
+
+      if (sireGecko && damGecko && sireSpecies !== damSpecies) {
+        alert(`Mismatched species! Sire (${sireGecko.name}) adalah ${sireSpecies}, sedangkan Dam (${damGecko.name}) adalah ${damSpecies}. Pairing hanya diperbolehkan untuk spesies yang sama.`);
+        return;
+      }
+
+      const pairingSpecies = sireGecko?.species || damGecko?.species || 'Leopard Gecko';
 
       const batch = writeBatch(db);
       if (isEditMode && selectedPairing?.id) {
         batch.update(doc(db, 'pairings', selectedPairing.id), {
           sireId: formData.sireId,
-          sireName: formData.sireName || 'Unknown',
+          sireName: finalSireName,
+          sireMorph: finalSireMorph,
           damId: formData.damId,
-          damName: formData.damName || 'Unknown',
+          damName: finalDamName,
+          damMorph: finalDamMorph,
           pairingDate: formData.pairingDate,
           species: pairingSpecies
         });
@@ -132,9 +149,11 @@ export default function Breeding({ profile }: BreedingProps) {
         const newPairingRef = doc(collection(db, 'pairings'));
         batch.set(newPairingRef, {
           sireId: formData.sireId,
-          sireName: formData.sireName || 'Unknown',
+          sireName: finalSireName,
+          sireMorph: finalSireMorph,
           damId: formData.damId,
-          damName: formData.damName || 'Unknown',
+          damName: finalDamName,
+          damMorph: finalDamMorph,
           pairingDate: formData.pairingDate,
           ownerId: profile.uid,
           clutchCount: 0,
@@ -288,9 +307,11 @@ export default function Breeding({ profile }: BreedingProps) {
     // Search filter
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
-      const sireMatch = pairing.sireName?.toLowerCase().includes(q);
-      const damMatch = pairing.damName?.toLowerCase().includes(q);
-      const pairMatch = `${pairing.sireName} x ${pairing.damName}`.toLowerCase().includes(q);
+      const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
+      const damInfo = getParentLineageDisplay('dam', pairing, geckos);
+      const sireMatch = sireInfo.name.toLowerCase().includes(q) || sireInfo.morph.toLowerCase().includes(q);
+      const damMatch = damInfo.name.toLowerCase().includes(q) || damInfo.morph.toLowerCase().includes(q);
+      const pairMatch = `${sireInfo.display} x ${damInfo.display}`.toLowerCase().includes(q);
       return sireMatch || damMatch || pairMatch;
     }
     return true;
@@ -421,6 +442,8 @@ export default function Breeding({ profile }: BreedingProps) {
                   const pairingClutches = clutches.filter(c => c.pairingId === pairing.id);
                   const totalEggs = pairingClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
                   const totalHatched = pairingClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
+                  const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
+                  const damInfo = getParentLineageDisplay('dam', pairing, geckos);
 
                   return (
                     <div key={pairing.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -437,7 +460,14 @@ export default function Breeding({ profile }: BreedingProps) {
                                 <MaleIcon className="w-12 h-12" />
                               </div>
                               <span className="block text-[8px] font-black text-blue-600 uppercase tracking-widest mb-1">Pejantan (Sire)</span>
-                              <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase pr-2">{pairing.sireName}</span>
+                              <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase pr-2">
+                                {sireInfo.morph || sireInfo.name || '-'}
+                              </span>
+                              {sireInfo.name && sireInfo.morph && sireInfo.name.toLowerCase() !== sireInfo.morph.toLowerCase() && (
+                                <span className="block text-[10px] font-bold text-slate-500 truncate uppercase mt-0.5">
+                                  ({sireInfo.name})
+                                </span>
+                              )}
                             </div>
 
                             {/* CONNECTOR */}
@@ -453,7 +483,14 @@ export default function Breeding({ profile }: BreedingProps) {
                                 <FemaleIcon className="w-12 h-12" />
                               </div>
                               <span className="block text-[8px] font-black text-pink-600 uppercase tracking-widest mb-1">Indukan (Dam)</span>
-                              <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase pl-2">{pairing.damName}</span>
+                              <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase pl-2">
+                                {damInfo.morph || damInfo.name || '-'}
+                              </span>
+                              {damInfo.name && damInfo.morph && damInfo.name.toLowerCase() !== damInfo.morph.toLowerCase() && (
+                                <span className="block text-[10px] font-bold text-slate-500 truncate uppercase mt-0.5">
+                                  ({damInfo.name})
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -716,6 +753,8 @@ export default function Breeding({ profile }: BreedingProps) {
                     const fertileEggs = Math.max(0, totalEggs - totalFailed);
                     const fertilityRate = totalEggs > 0 ? Math.round((fertileEggs / totalEggs) * 100) : 0;
                     const hatchRate = fertileEggs > 0 ? Math.round((totalHatched / fertileEggs) * 100) : 0;
+                    const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
+                    const damInfo = getParentLineageDisplay('dam', pairing, geckos);
 
                     return (
                       <div key={pairing.id} className="bg-slate-50/50 rounded-[2rem] border border-slate-200 overflow-hidden transition-all hover:shadow-md">
@@ -741,9 +780,16 @@ export default function Breeding({ profile }: BreedingProps) {
                           <div className="flex flex-col gap-5">
                             <div className="flex items-center justify-between gap-4">
                               {/* SIRE */}
-                              <div className="flex-1 text-center bg-slate-100 rounded-2xl p-3 border border-slate-200 relative overflow-hidden opacity-80">
+                              <div className="flex-1 text-center bg-slate-100 rounded-2xl p-3 border border-slate-200 relative overflow-hidden opacity-90">
                                 <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Male (Sire)</span>
-                                <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase">{pairing.sireName}</span>
+                                <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase">
+                                  {sireInfo.morph || sireInfo.name || '-'}
+                                </span>
+                                {sireInfo.name && sireInfo.morph && sireInfo.name.toLowerCase() !== sireInfo.morph.toLowerCase() && (
+                                  <span className="block text-[10px] font-bold text-slate-500 truncate uppercase mt-0.5">
+                                    ({sireInfo.name})
+                                  </span>
+                                )}
                               </div>
 
                               <div className="shrink-0">
@@ -753,9 +799,16 @@ export default function Breeding({ profile }: BreedingProps) {
                               </div>
 
                               {/* DAM */}
-                              <div className="flex-1 text-center bg-slate-100 rounded-2xl p-3 border border-slate-200 relative overflow-hidden opacity-80">
+                              <div className="flex-1 text-center bg-slate-100 rounded-2xl p-3 border border-slate-200 relative overflow-hidden opacity-90">
                                 <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Female (Dam)</span>
-                                <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase">{pairing.damName}</span>
+                                <span className="block font-black text-slate-800 text-xs sm:text-sm truncate uppercase">
+                                  {damInfo.morph || damInfo.name || '-'}
+                                </span>
+                                {damInfo.name && damInfo.morph && damInfo.name.toLowerCase() !== damInfo.morph.toLowerCase() && (
+                                  <span className="block text-[10px] font-bold text-slate-500 truncate uppercase mt-0.5">
+                                    ({damInfo.name})
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -1068,15 +1121,25 @@ export default function Breeding({ profile }: BreedingProps) {
                               <span className="text-base sm:text-lg font-black leading-none mt-0.5">{clutch.clutchNumber}</span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                <div className="px-2 py-0.5 rounded-lg border border-slate-200 bg-white shadow-sm flex-auto min-w-0 max-w-full">
-                                  <span className="font-black text-slate-800 text-[9px] sm:text-[10px] uppercase block truncate">{pairing?.sireName}</span>
-                                </div>
-                                <span className="text-slate-400 font-bold text-[10px] shrink-0">×</span>
-                                <div className="px-2 py-0.5 rounded-lg border border-slate-200 bg-white shadow-sm flex-auto min-w-0 max-w-full">
-                                  <span className="font-black text-slate-800 text-[9px] sm:text-[10px] uppercase block truncate">{pairing?.damName}</span>
-                                </div>
-                              </div>
+                              {(() => {
+                                const clutchSireInfo = pairing ? getParentLineageDisplay('sire', pairing, geckos) : null;
+                                const clutchDamInfo = pairing ? getParentLineageDisplay('dam', pairing, geckos) : null;
+                                return (
+                                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                    <div className="px-2 py-0.5 rounded-lg border border-slate-200 bg-white shadow-sm flex-auto min-w-0 max-w-full">
+                                      <span className="font-black text-slate-800 text-[9px] sm:text-[10px] uppercase block truncate">
+                                        {clutchSireInfo?.display || pairing?.sireName || 'Sire'}
+                                      </span>
+                                    </div>
+                                    <span className="text-slate-400 font-bold text-[10px] shrink-0">×</span>
+                                    <div className="px-2 py-0.5 rounded-lg border border-slate-200 bg-white shadow-sm flex-auto min-w-0 max-w-full">
+                                      <span className="font-black text-slate-800 text-[9px] sm:text-[10px] uppercase block truncate">
+                                        {clutchDamInfo?.display || pairing?.damName || 'Dam'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               <div className="flex items-center gap-3 mt-1">
                                 <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                   <Plus className="w-3 h-3" /> {formatDate(clutch.layDate)}
@@ -1159,80 +1222,84 @@ export default function Breeding({ profile }: BreedingProps) {
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight text-center">
-                  {isEditMode ? 'Edit Breeding Pair' : 'New Breeding Pair'}
-                </h2>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-xl max-h-[90vh] flex flex-col rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+              <div className="p-6 sm:p-8 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                    {isEditMode ? 'Edit Breeding Pair' : 'New Breeding Pair'}
+                  </h2>
+                  <p className="text-xs font-bold text-slate-400 mt-0.5">
+                    {isEditMode ? 'Perbarui data pasangan indukan' : 'Pilih atau cari pejantan dan betina untuk memulai pairing'}
+                  </p>
+                </div>
                 <button onClick={() => { setIsModalOpen(false); setIsEditMode(false); }} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X className="w-6 h-6 text-slate-400" /></button>
               </div>
-              <form onSubmit={handleAddPairing} className="p-8 space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1 flex items-center gap-2">
-                       <MaleIcon className="w-3 h-3 text-blue-500" /> SIRE (Koleksi Jantan)
+              <form onSubmit={handleAddPairing} className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1">
+                <div className="space-y-5">
+                  {/* SIRE Search & Select */}
+                  <BreedingParentSelect
+                    label="SIRE (Pejantan)"
+                    type="sire"
+                    allGeckos={geckos}
+                    selectedId={formData.sireId}
+                    manualName={formData.sireName}
+                    partnerGeckoId={formData.damId}
+                    onSelect={(gecko) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        sireId: gecko ? gecko.id : '',
+                        sireName: gecko ? gecko.name : prev.sireName
+                      }));
+                    }}
+                    onManualNameChange={(name) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        sireName: name,
+                        sireId: prev.sireId && geckos.find(g => g.id === prev.sireId)?.name !== name ? '' : prev.sireId
+                      }));
+                    }}
+                  />
+
+                  {/* DAM Search & Select */}
+                  <BreedingParentSelect
+                    label="DAM (Betina)"
+                    type="dam"
+                    allGeckos={geckos}
+                    selectedId={formData.damId}
+                    manualName={formData.damName}
+                    partnerGeckoId={formData.sireId}
+                    onSelect={(gecko) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        damId: gecko ? gecko.id : '',
+                        damName: gecko ? gecko.name : prev.damName
+                      }));
+                    }}
+                    onManualNameChange={(name) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        damName: name,
+                        damId: prev.damId && geckos.find(g => g.id === prev.damId)?.name !== name ? '' : prev.damId
+                      }));
+                    }}
+                  />
+
+                  {/* Tanggal Pairing */}
+                  <div className="space-y-2 p-4 bg-slate-50/80 rounded-2xl border border-slate-100">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" /> Tanggal Mulai Pairing
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <select 
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-red-500 transition-all font-sans"
-                        value={formData.sireId}
-                        onChange={e => {
-                          const sire = geckos.find(g => g.id === e.target.value);
-                          setFormData({ ...formData, sireId: e.target.value, sireName: sire?.name || formData.sireName });
-                        }}
-                      >
-                        <option value="">Pilih Jantan...</option>
-                        {geckos.filter(g => g.gender === 'male' && g.status !== 'sold' && g.status !== 'dead' && (!formData.damId || (g.species || 'Leopard Gecko') === (geckos.find(x => x.id === formData.damId)?.species || 'Leopard Gecko'))).map(g => (
-                          <option key={g.id} value={g.id}>{g.name} - {g.morph} [{(g.species || 'Leopard Gecko') === 'African Fat-Tailed Gecko' ? 'AFT' : 'Leopard'}]</option>
-                        ))}
-                      </select>
-                      <input 
-                        placeholder="Nama Jantan (Manual)..."
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-red-500 transition-all uppercase"
-                        value={formData.sireName}
-                        onChange={e => setFormData({ ...formData, sireName: e.target.value.toUpperCase() })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1 flex items-center gap-2">
-                       <FemaleIcon className="w-3 h-3 text-pink-500" /> DAM (Koleksi Betina)
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <select 
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-red-500 transition-all"
-                        value={formData.damId}
-                        onChange={e => {
-                          const dam = geckos.find(g => g.id === e.target.value);
-                          setFormData({ ...formData, damId: e.target.value, damName: dam?.name || formData.damName });
-                        }}
-                      >
-                        <option value="">Pilih Betina...</option>
-                        {geckos.filter(g => g.gender === 'female' && g.status !== 'sold' && g.status !== 'dead' && (!formData.sireId || (g.species || 'Leopard Gecko') === (geckos.find(x => x.id === formData.sireId)?.species || 'Leopard Gecko'))).map(g => (
-                          <option key={g.id} value={g.id}>{g.name} - {g.morph} [{(g.species || 'Leopard Gecko') === 'African Fat-Tailed Gecko' ? 'AFT' : 'Leopard'}]</option>
-                        ))}
-                      </select>
-                      <input 
-                        placeholder="Nama Betina (Manual)..."
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-red-500 transition-all uppercase"
-                        value={formData.damName}
-                        onChange={e => setFormData({ ...formData, damName: e.target.value.toUpperCase() })}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1">Tanggal Pairing</label>
                     <input 
                       type="date" 
                       required
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-red-500 transition-all"
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold shadow-2xs outline-none focus:ring-2 focus:ring-red-500 transition-all"
                       value={formData.pairingDate}
                       onChange={e => setFormData({ ...formData, pairingDate: e.target.value })}
                     />
                   </div>
                 </div>
-                <button type="submit" className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-xl shadow-red-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4" /> {isEditMode ? 'Simpan Perubahan' : 'Mulai Pairing'}
+                <button type="submit" className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-xl shadow-red-200 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
+                  <Check className="w-4 h-4 stroke-[3]" /> {isEditMode ? 'Simpan Perubahan' : 'Mulai Pairing'}
                 </button>
               </form>
             </motion.div>
@@ -1317,7 +1384,7 @@ export default function Breeding({ profile }: BreedingProps) {
                     <div>
                       <p className="text-xs font-bold text-slate-700 uppercase tracking-tight">Pairing Couple</p>
                       <p className="text-[11px] text-slate-500 font-medium">
-                        {pairingToClose?.sireName} x {pairingToClose?.damName}
+                        {pairingToClose ? `${getParentLineageDisplay('sire', pairingToClose, geckos).display} × ${getParentLineageDisplay('dam', pairingToClose, geckos).display}` : ''}
                       </p>
                     </div>
                   </div>

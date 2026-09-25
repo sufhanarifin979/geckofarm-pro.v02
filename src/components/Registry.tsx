@@ -10,6 +10,7 @@ import {
   Check, 
   AlertTriangle,
   ChevronRight,
+  ChevronLeft,
   User as UserIcon,
   Venus as FemaleIcon,
   Mars as MaleIcon,
@@ -30,9 +31,10 @@ import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, increment, getDocs, orderBy, writeBatch } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { differenceInYears, differenceInMonths } from 'date-fns';
-import { cn } from '../lib/utils';
+import { cn, formatDateDMY, getParentLineageDisplay } from '../lib/utils';
 import ConfirmationModal from './ConfirmationModal';
 import LineageChart from './LineageChart';
+import PedigreeSearchSelect from './PedigreeSearchSelect';
 import { autoCropToSquare, uploadGeckoImage, deleteGeckoImage } from '../lib/imageUtils';
 import Tooltip from './ui/Tooltip';
 import { Loader2 } from 'lucide-react';
@@ -101,9 +103,12 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
     damId: '',
     sireName: '',
     damName: '',
+    sireMorph: '',
+    damMorph: '',
     info: '',
     note: '',
     photoUrl: '',
+    photos: [],
     purchasePrice: undefined
   };
 
@@ -128,7 +133,9 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const [imgSrc, setImgSrc] = useState('');
+  const [formPhotos, setFormPhotos] = useState<string[]>([]);
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [viewSlideIndex, setViewSlideIndex] = useState(0);
 
   const [displayLimit, setDisplayLimit] = useState(4);
 
@@ -137,6 +144,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       fetchLogs(selectedGecko.id);
       fetchAiInsight(selectedGecko.id);
       setActiveViewTab('details');
+      setViewSlideIndex(0);
     }
   }, [selectedGecko, isViewModalOpen]);
 
@@ -144,10 +152,16 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   useEffect(() => {
     const state = location.state as any;
     if (state?.autoOpen && state?.prefilledData) {
+      const prefilled = state.prefilledData;
       setFormData(prev => ({
         ...initialFormData,
-        ...state.prefilledData
+        ...prefilled
       }));
+      const prefilledPhotos = (prefilled.photos && prefilled.photos.length > 0)
+        ? prefilled.photos
+        : (prefilled.photoUrl ? [prefilled.photoUrl] : []);
+      setFormPhotos(prefilledPhotos);
+      setActivePhotoIndex(0);
       setIsModalOpen(true);
       
       // Clean up state so it doesn't trigger on refresh
@@ -210,17 +224,104 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
     }
   };
 
-  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const reader = new FileReader();
-      reader.addEventListener('load', async () => {
-        const result = reader.result?.toString() || '';
-        const cropped = await autoCropToSquare(result);
-        setImgSrc(cropped);
-        setFormData(prev => ({ ...prev, photoUrl: cropped }));
+  const onSelectFiles = async (e: React.ChangeEvent<HTMLInputElement>, targetIndex?: number) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+
+    const readFileAndCrop = (file: File): Promise<string> => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const result = reader.result?.toString() || '';
+          if (result) {
+            try {
+              const cropped = await autoCropToSquare(result);
+              resolve(cropped);
+            } catch {
+              resolve(result);
+            }
+          } else {
+            resolve('');
+          }
+        };
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
       });
-      reader.readAsDataURL(e.target.files[0]);
+    };
+
+    try {
+      const croppedList: string[] = [];
+      for (const file of files) {
+        const cropped = await readFileAndCrop(file);
+        if (cropped) croppedList.push(cropped);
+      }
+
+      if (croppedList.length === 0) return;
+
+      setFormPhotos(prev => {
+        let updated = [...prev];
+        if (targetIndex !== undefined) {
+          updated[targetIndex] = croppedList[0];
+        } else {
+          for (const item of croppedList) {
+            if (updated.length < 3) {
+              updated.push(item);
+            }
+          }
+        }
+        const trimmed = updated.slice(0, 3);
+        setFormData(fd => ({
+          ...fd,
+          photos: trimmed,
+          photoUrl: trimmed[0] || ''
+        }));
+        return trimmed;
+      });
+
+      if (targetIndex !== undefined) {
+        setActivePhotoIndex(targetIndex);
+      } else {
+        setActivePhotoIndex(prev => Math.min(prev, 2));
+      }
+    } catch (err) {
+      console.error("Error processing photos:", err);
+      addToast("Gagal memproses foto", "error");
+    } finally {
+      e.target.value = '';
     }
+  };
+
+  const handleRemovePhoto = (indexToRemove: number) => {
+    setFormPhotos(prev => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      setFormData(fd => ({
+        ...fd,
+        photos: updated,
+        photoUrl: updated[0] || ''
+      }));
+      return updated;
+    });
+    setActivePhotoIndex(prev => {
+      if (prev >= indexToRemove && prev > 0) return prev - 1;
+      return 0;
+    });
+  };
+
+  const handleSetMainPhoto = (index: number) => {
+    if (index === 0) return;
+    setFormPhotos(prev => {
+      const target = prev[index];
+      const rest = prev.filter((_, idx) => idx !== index);
+      const updated = [target, ...rest];
+      setFormData(fd => ({
+        ...fd,
+        photos: updated,
+        photoUrl: updated[0] || ''
+      }));
+      return updated;
+    });
+    setActivePhotoIndex(0);
+    addToast("Foto utama diperbarui!");
   };
 
   const validateForm = () => {
@@ -246,22 +347,27 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       return;
     }
 
-    const isNewPhoto = imgSrc && imgSrc.startsWith('data:image');
-    
     setIsUploading(true);
     setUploadProgress(0);
 
     try {
       console.log('[DEBUG] Starting handleSubmit sequence (base64 mode)');
-      let finalPhotoUrl = formData.photoUrl || '';
       
-      // 1. Process image if it's new
-      if (isNewPhoto) {
-        console.log('[DEBUG] Processing new image for Firestore storage');
-        finalPhotoUrl = await uploadGeckoImage(profile.uid, '', imgSrc, (progress) => {
-          setUploadProgress(progress);
-        });
+      // Process all photos
+      const processedPhotos: string[] = [];
+      for (let i = 0; i < formPhotos.length; i++) {
+        const photo = formPhotos[i];
+        if (photo.startsWith('data:image')) {
+          setUploadProgress(Math.round(((i + 0.5) / formPhotos.length) * 80));
+          const compressed = await uploadGeckoImage(profile.uid, '', photo);
+          processedPhotos.push(compressed);
+        } else {
+          processedPhotos.push(photo);
+        }
       }
+      setUploadProgress(90);
+
+      const finalPhotoUrl = processedPhotos[0] || '';
 
       const batch = writeBatch(db);
       let geckoId = editingGecko?.id;
@@ -275,6 +381,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
         const rawData = { 
           ...formData, 
           photoUrl: finalPhotoUrl,
+          photos: processedPhotos,
           ownerId: profile.uid,
           createdAt: serverTimestamp(),
           gecko_id: geckoId
@@ -289,6 +396,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
         const rawData = { 
           ...formData, 
           photoUrl: finalPhotoUrl, 
+          photos: processedPhotos,
           ownerId: profile.uid,
           createdAt: formData.createdAt || serverTimestamp()
         };
@@ -353,7 +461,8 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const resetForm = () => {
     setFormData(initialFormData);
     setFormErrors({});
-    setImgSrc('');
+    setFormPhotos([]);
+    setActivePhotoIndex(0);
     setIsModalOpen(false);
     setEditingGecko(null);
     setIsUploading(false);
@@ -396,6 +505,10 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const handleEdit = (gecko: Gecko) => {
     setEditingGecko(gecko);
     const geckoSpecies = gecko.species || 'Leopard Gecko';
+    const existingPhotos = (gecko.photos && gecko.photos.length > 0)
+      ? [...gecko.photos]
+      : (gecko.photoUrl ? [gecko.photoUrl] : []);
+
     setFormData({
       name: gecko.name || '',
       morph: gecko.morph || '',
@@ -408,13 +521,17 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
       damId: gecko.damId || '',
       sireName: gecko.sireName || '',
       damName: gecko.damName || '',
+      sireMorph: gecko.sireMorph || '',
+      damMorph: gecko.damMorph || '',
       info: gecko.info || '',
       note: gecko.note || '',
-      photoUrl: gecko.photoUrl || '',
+      photoUrl: existingPhotos[0] || '',
+      photos: existingPhotos,
       createdAt: gecko.createdAt,
       purchasePrice: gecko.purchasePrice
     });
-    setImgSrc(gecko.photoUrl || '');
+    setFormPhotos(existingPhotos);
+    setActivePhotoIndex(0);
     if (geckoSpecies === 'African Fat-Tailed Gecko') {
       const rand = AFT_PLACEHOLDERS[Math.floor(Math.random() * AFT_PLACEHOLDERS.length)];
       const prefix = rand.toUpperCase().startsWith("E.G.") ? "" : "E.G. ";
@@ -613,11 +730,17 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-slate-100 flex-shrink-0 relative overflow-hidden ring-2 ring-slate-50 group-hover:ring-emerald-100 transition-all">
-                    {gecko.photoUrl ? (
-                      <img src={gecko.photoUrl} alt={gecko.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
+                    {gecko.photoUrl || (gecko.photos && gecko.photos[0]) ? (
+                      <img src={gecko.photoUrl || gecko.photos?.[0]} alt={gecko.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-slate-300">
                         <Camera size={20} />
+                      </div>
+                    )}
+                    {gecko.photos && gecko.photos.length > 1 && (
+                      <div className="absolute top-1 right-1 px-1 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[8px] font-black text-white flex items-center gap-0.5 shadow-sm leading-none">
+                        <Layers size={8} />
+                        <span>{gecko.photos.length}</span>
                       </div>
                     )}
                     <div className={`absolute bottom-0 inset-x-0 h-1.5 ${
@@ -797,17 +920,95 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                 </button>
               </Tooltip>
 
-              {/* Header Image 1:1 */}
-              <div className="w-full aspect-square bg-slate-100 relative flex-shrink-0">
-                {selectedGecko.photoUrl ? (
-                  <img src={selectedGecko.photoUrl} alt={selectedGecko.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
-                    <Camera size={64} className="mb-2 opacity-20" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">No Photo Available</span>
+              {/* Header Image 1:1 with Multi-Photo Slide Carousel */}
+              {(() => {
+                const detailPhotos = (selectedGecko.photos && selectedGecko.photos.length > 0)
+                  ? selectedGecko.photos
+                  : (selectedGecko.photoUrl ? [selectedGecko.photoUrl] : []);
+
+                return (
+                  <div className="w-full aspect-square bg-slate-900 relative flex-shrink-0 overflow-hidden select-none group">
+                    {detailPhotos.length > 0 ? (
+                      <>
+                        <motion.img 
+                          key={viewSlideIndex}
+                          initial={{ opacity: 0.3 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.25 }}
+                          src={detailPhotos[viewSlideIndex] || detailPhotos[0]} 
+                          alt={`${selectedGecko.name} - Foto ${viewSlideIndex + 1}`} 
+                          className="w-full h-full object-cover" 
+                          referrerPolicy="no-referrer" 
+                          loading="lazy" 
+                        />
+
+                        {/* Navigation controls if more than 1 photo */}
+                        {detailPhotos.length > 1 && (
+                          <>
+                            {/* Prev Button */}
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewSlideIndex(prev => (prev === 0 ? detailPhotos.length - 1 : prev - 1));
+                              }}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-lg active:scale-95 z-20 cursor-pointer"
+                              aria-label="Foto sebelumnya"
+                            >
+                              <ChevronLeft size={20} />
+                            </button>
+
+                            {/* Next Button */}
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewSlideIndex(prev => (prev === detailPhotos.length - 1 ? 0 : prev + 1));
+                              }}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-lg active:scale-95 z-20 cursor-pointer"
+                              aria-label="Foto berikutnya"
+                            >
+                              <ChevronRight size={20} />
+                            </button>
+
+                            {/* Counter Badge */}
+                            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border border-white/10 z-20 flex items-center gap-1.5 shadow-sm">
+                              <span>{viewSlideIndex + 1}</span>
+                              <span className="opacity-40">/</span>
+                              <span>{detailPhotos.length}</span>
+                            </div>
+
+                            {/* Bottom Dots */}
+                            <div className="absolute bottom-3 inset-x-0 flex flex-col items-center gap-2 z-20 pointer-events-none">
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-full border border-white/15 pointer-events-auto shadow-lg">
+                                {detailPhotos.map((_, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setViewSlideIndex(idx);
+                                    }}
+                                    className={`h-2 rounded-full transition-all cursor-pointer ${
+                                      viewSlideIndex === idx ? 'w-6 bg-emerald-400' : 'w-2 bg-white/50 hover:bg-white'
+                                    }`}
+                                    aria-label={`Slide ${idx + 1}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-100">
+                        <Camera size={64} className="mb-2 opacity-20" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">No Photo Available</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Tabs */}
               <div className="flex bg-slate-50/50 px-4 sm:px-8 py-5 border-b border-slate-100 flex-shrink-0">
@@ -878,19 +1079,23 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                         </div>
                         <div className="space-y-1 pl-4">
                           <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Hatch Date</div>
-                          <div className="text-base font-black text-slate-800">{selectedGecko.birthDate || 'Unknown'}</div>
+                          <div className="text-base font-black text-slate-800">{formatDateDMY(selectedGecko.birthDate)}</div>
                         </div>
                       </div>
 
-                      {/* Row 2: Sire & Dam Morph */}
+                      {/* Row 2: Sire & Dam Lineage */}
                       <div className="grid grid-cols-2 gap-4 pb-4 border-b border-slate-50 relative">
                         <div className="space-y-1 pr-4 border-r border-slate-100">
-                          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Sire Morph</div>
-                          <div className="text-sm font-bold text-slate-700 uppercase leading-snug break-words">{selectedGecko.sireName || 'N/A'}</div>
+                          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Sire Lineage</div>
+                          <div className="text-sm font-bold text-slate-800 uppercase leading-snug break-words">
+                            {getParentLineageDisplay('sire', selectedGecko, geckos).display}
+                          </div>
                         </div>
                         <div className="space-y-1 pl-4">
-                          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Dam Morph</div>
-                          <div className="text-sm font-bold text-slate-700 uppercase leading-snug break-words">{selectedGecko.damName || 'N/A'}</div>
+                          <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Dam Lineage</div>
+                          <div className="text-sm font-bold text-slate-800 uppercase leading-snug break-words">
+                            {getParentLineageDisplay('dam', selectedGecko, geckos).display}
+                          </div>
                         </div>
                       </div>
 
@@ -995,37 +1200,193 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                 </div>
                 <div className="flex-1 overflow-y-auto p-5 sm:p-8 custom-scrollbar">
                     <form id="gecko-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 pb-12">
-                        <div className="space-y-8">
-                            <div className="aspect-square bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center relative overflow-hidden group">
-                                {imgSrc ? (
-                                    <div className="relative w-full h-full">
-                                        <img 
-                                            src={imgSrc} 
-                                            className="w-full h-full object-cover" 
-                                            referrerPolicy="no-referrer"
-                                        />
-                                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                                            <Tooltip content="Change photo">
-                                              <label className="px-4 py-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-lg border border-white/20 cursor-pointer hover:bg-black/80 transition-all flex items-center gap-2">
-                                                  <Upload size={12} />
-                                                  Ganti
-                                                  <input type="file" className="hidden" accept="image/*" onChange={onSelectFile} />
-                                              </label>
-                                            </Tooltip>
+                        <div className="space-y-6">
+                            {/* Multi-Photo Slide & Upload Section */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between px-1">
+                                    <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.2em]">
+                                        Foto Gecko ({formPhotos.length}/3)
+                                    </label>
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Slide Multi-Foto
+                                    </span>
+                                </div>
+
+                                {/* Main Preview Area */}
+                                <div className="aspect-square bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center relative overflow-hidden group">
+                                    {formPhotos.length > 0 && formPhotos[activePhotoIndex] ? (
+                                        <div className="relative w-full h-full bg-slate-900">
+                                            <img 
+                                                src={formPhotos[activePhotoIndex]} 
+                                                alt={`Gecko preview ${activePhotoIndex + 1}`}
+                                                className="w-full h-full object-cover" 
+                                                referrerPolicy="no-referrer"
+                                            />
+
+                                            {/* Badge Info */}
+                                            <div className="absolute top-4 left-4 flex items-center gap-1.5 z-10">
+                                                <span className="px-3 py-1 bg-black/60 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-full border border-white/20">
+                                                    Foto {activePhotoIndex + 1} / {formPhotos.length}
+                                                </span>
+                                                {activePhotoIndex === 0 && (
+                                                    <span className="px-2.5 py-1 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-sm">
+                                                        Utama
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Slide Arrows (if more than 1 photo) */}
+                                            {formPhotos.length > 1 && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActivePhotoIndex(prev => (prev === 0 ? formPhotos.length - 1 : prev - 1))}
+                                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-md active:scale-95 z-10 cursor-pointer"
+                                                        aria-label="Foto sebelumnya"
+                                                    >
+                                                        <ChevronLeft size={18} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActivePhotoIndex(prev => (prev === formPhotos.length - 1 ? 0 : prev + 1))}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/50 hover:bg-black/80 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-md active:scale-95 z-10 cursor-pointer"
+                                                        aria-label="Foto berikutnya"
+                                                    >
+                                                        <ChevronRight size={18} />
+                                                    </button>
+                                                </>
+                                            )}
+
+                                            {/* Overlay Controls */}
+                                            <div className="absolute bottom-4 inset-x-4 flex items-center justify-center gap-2 z-10 flex-wrap">
+                                                <Tooltip content="Ganti foto slot ini">
+                                                    <label className="px-3.5 py-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-xl border border-white/20 cursor-pointer hover:bg-black/80 transition-all flex items-center gap-1.5 shadow-sm">
+                                                        <Upload size={12} />
+                                                        <span>Ganti</span>
+                                                        <input 
+                                                            type="file" 
+                                                            className="hidden" 
+                                                            accept="image/*" 
+                                                            onChange={(e) => onSelectFiles(e, activePhotoIndex)} 
+                                                        />
+                                                    </label>
+                                                </Tooltip>
+
+                                                {activePhotoIndex !== 0 && (
+                                                    <Tooltip content="Jadikan foto utama (tampil di ID Card & Label)">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSetMainPhoto(activePhotoIndex)}
+                                                            className="px-3.5 py-2 bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-xl border border-emerald-400/30 hover:bg-emerald-600 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                                        >
+                                                            <Check size={12} />
+                                                            <span>Set Utama</span>
+                                                        </button>
+                                                    </Tooltip>
+                                                )}
+
+                                                <Tooltip content="Hapus foto dari slot ini">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemovePhoto(activePhotoIndex)}
+                                                        className="px-3.5 py-2 bg-rose-600/80 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-xl border border-rose-400/30 hover:bg-rose-600 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                        <span>Hapus</span>
+                                                    </button>
+                                                </Tooltip>
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <Tooltip content="Select a photo for your gecko">
-                                      <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center hover:bg-slate-100/50 transition-colors">
-                                          <Camera size={48} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
-                                          <div className="text-center mt-4">
-                                              <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">Upload Photo</span>
-                                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block px-4">Square format recommended</span>
-                                          </div>
-                                          <input type="file" className="hidden" accept="image/*" onChange={onSelectFile} />
-                                      </label>
-                                    </Tooltip>
-                                )}
+                                    ) : (
+                                        <Tooltip content="Pilih foto untuk gecko Anda (hingga 3 foto)">
+                                            <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center hover:bg-slate-100/50 transition-colors p-6">
+                                                <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                                    <Camera size={32} />
+                                                </div>
+                                                <div className="text-center">
+                                                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">Upload Foto Gecko</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 block">Maks. 3 foto (slide) • Format kotak disarankan</span>
+                                                    <span className="text-[9px] font-semibold text-emerald-600 mt-2 inline-block px-3 py-1 bg-emerald-50 rounded-full">Bisa pilih 1 - 3 foto sekaligus</span>
+                                                </div>
+                                                <input 
+                                                    type="file" 
+                                                    multiple 
+                                                    className="hidden" 
+                                                    accept="image/*" 
+                                                    onChange={(e) => onSelectFiles(e)} 
+                                                />
+                                            </label>
+                                        </Tooltip>
+                                    )}
+                                </div>
+
+                                {/* 3 Photo Thumbnails / Slots */}
+                                <div className="grid grid-cols-3 gap-2.5 pt-1">
+                                    {[0, 1, 2].map((slotIdx) => {
+                                        const photo = formPhotos[slotIdx];
+                                        const isActive = formPhotos.length > 0 && activePhotoIndex === slotIdx;
+                                        
+                                        return (
+                                            <div 
+                                                key={slotIdx}
+                                                onClick={() => {
+                                                    if (photo) {
+                                                        setActivePhotoIndex(slotIdx);
+                                                    }
+                                                }}
+                                                className={`aspect-square rounded-2xl relative overflow-hidden transition-all flex flex-col items-center justify-center ${
+                                                    isActive 
+                                                        ? 'ring-2 ring-emerald-500 ring-offset-2 shadow-sm' 
+                                                        : 'hover:border-slate-300'
+                                                } ${
+                                                    photo 
+                                                        ? 'bg-slate-900 cursor-pointer' 
+                                                        : 'bg-slate-50 border-2 border-dashed border-slate-200'
+                                                }`}
+                                            >
+                                                {photo ? (
+                                                    <>
+                                                        <img 
+                                                            src={photo} 
+                                                            alt={`Slot ${slotIdx + 1}`} 
+                                                            className="w-full h-full object-cover" 
+                                                        />
+                                                        <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[8px] font-black text-white uppercase tracking-wider">
+                                                            {slotIdx === 0 ? 'Utama' : `#${slotIdx + 1}`}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRemovePhoto(slotIdx);
+                                                            }}
+                                                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-500/80 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm"
+                                                            title="Hapus foto"
+                                                        >
+                                                            <X size={10} />
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer p-2 text-center group/slot">
+                                                        <Plus size={16} className="text-slate-400 group-hover/slot:text-emerald-500 transition-colors" />
+                                                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tight mt-1">
+                                                            {slotIdx === 0 ? '+ Utama' : `+ Foto ${slotIdx + 1}`}
+                                                        </span>
+                                                        <input 
+                                                            type="file" 
+                                                            className="hidden" 
+                                                            accept="image/*" 
+                                                            onChange={(e) => onSelectFiles(e, slotIdx)} 
+                                                        />
+                                                    </label>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <p className="text-[9px] font-medium text-slate-400 italic px-1">
+                                    * Foto #1 otomatis digunakan sebagai foto utama pada ID Card & Label.
+                                </p>
                             </div>
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black uppercase text-slate-600 tracking-[0.2em] px-1">Sexing Selection</label>
@@ -1185,61 +1546,57 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
                                 </div>
                             </div>
 
-                            {/* Sire & Dam Sections refined for mobile */}
-                            <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
-                                <div className="flex items-center gap-2 mb-2 px-1">
-                                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Sire Pedigree (Father)</label>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <select 
-                                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs" 
-                                      value={formData.sireId} 
-                                      onChange={e => {
-                                        const s = geckos.find(g => g.id === e.target.value);
-                                        setFormData({...formData, sireId: e.target.value, sireName: s?.name || formData.sireName});
-                                      }}
-                                    >
-                                        <option value="">Select from Stock...</option>
-                                        {geckos.filter(g => g.gender === 'male' && g.status !== 'sold' && g.status !== 'dead' && (g.species || 'Leopard Gecko') === (formData.species || 'Leopard Gecko')).map(g => (
-                                          <option key={g.id} value={g.id}>{g.name}</option>
-                                        ))}
-                                    </select>
-                                    <input 
-                                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase" 
-                                      placeholder="Or Enter Manual Name..."
-                                      value={formData.sireName} 
-                                      onChange={e => setFormData({...formData, sireName: e.target.value.toUpperCase()})} 
-                                    />
-                                </div>
-                            </div>
+                            {/* Sire & Dam Pedigree Search & Selection */}
+                            <div className="space-y-4">
+                                <PedigreeSearchSelect
+                                  label="Sire Pedigree (Father)"
+                                  type="sire"
+                                  species={formData.species || 'Leopard Gecko'}
+                                  currentGeckoId={editingGecko?.id}
+                                  allGeckos={geckos}
+                                  selectedId={formData.sireId}
+                                  manualName={formData.sireName}
+                                  onSelect={(gecko) => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      sireId: gecko ? gecko.id : '',
+                                      sireName: gecko ? gecko.name : prev.sireName,
+                                      sireMorph: gecko ? gecko.morph : prev.sireMorph
+                                    }));
+                                  }}
+                                  onManualNameChange={(name) => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      sireName: name,
+                                      sireId: prev.sireId && geckos.find(g => g.id === prev.sireId)?.name !== name ? '' : prev.sireId
+                                    }));
+                                  }}
+                                />
 
-                            <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
-                                <div className="flex items-center gap-2 mb-2 px-1">
-                                   <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
-                                   <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Dam Pedigree (Mother)</label>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <select 
-                                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs" 
-                                      value={formData.damId} 
-                                      onChange={e => {
-                                        const d = geckos.find(g => g.id === e.target.value);
-                                        setFormData({...formData, damId: e.target.value, damName: d?.name || formData.damName});
-                                      }}
-                                    >
-                                        <option value="">Select from Stock...</option>
-                                        {geckos.filter(g => g.gender === 'female' && g.status !== 'sold' && g.status !== 'dead' && (g.species || 'Leopard Gecko') === (formData.species || 'Leopard Gecko')).map(g => (
-                                          <option key={g.id} value={g.id}>{g.name}</option>
-                                        ))}
-                                    </select>
-                                    <input 
-                                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold text-xs uppercase" 
-                                      placeholder="Or Enter Manual Name..."
-                                      value={formData.damName} 
-                                      onChange={e => setFormData({...formData, damName: e.target.value.toUpperCase()})} 
-                                    />
-                                </div>
+                                <PedigreeSearchSelect
+                                  label="Dam Pedigree (Mother)"
+                                  type="dam"
+                                  species={formData.species || 'Leopard Gecko'}
+                                  currentGeckoId={editingGecko?.id}
+                                  allGeckos={geckos}
+                                  selectedId={formData.damId}
+                                  manualName={formData.damName}
+                                  onSelect={(gecko) => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      damId: gecko ? gecko.id : '',
+                                      damName: gecko ? gecko.name : prev.damName,
+                                      damMorph: gecko ? gecko.morph : prev.damMorph
+                                    }));
+                                  }}
+                                  onManualNameChange={(name) => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      damName: name,
+                                      damId: prev.damId && geckos.find(g => g.id === prev.damId)?.name !== name ? '' : prev.damId
+                                    }));
+                                  }}
+                                />
                             </div>
 
                             <div className="space-y-1">

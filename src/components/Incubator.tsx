@@ -27,7 +27,7 @@ import { Clutch, Pairing, UserProfile, Gecko } from '../types';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, writeBatch, serverTimestamp, increment } from 'firebase/firestore';
 import { autoCropToSquare, uploadGeckoImage } from '../lib/imageUtils';
-import { cn, formatDate } from '../lib/utils';
+import { cn, formatDate, getParentLineageDisplay } from '../lib/utils';
 import { differenceInDays, addDays, format, isAfter, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { useGeckos } from '../GeckoProvider';
@@ -169,6 +169,8 @@ export default function Incubator({ profile, setProfile }: IncubatorProps) {
       damId: pairing?.damId || '',
       sireName: pairing?.sireName || '',
       damName: pairing?.damName || '',
+      sireMorph: sire?.morph || '',
+      damMorph: dam?.morph || '',
       info: '',
       note: `Hatched from Clutch #${clutch.clutchNumber} (${pairing?.sireName || 'Unknown'} x ${pairing?.damName || 'Unknown'})`,
       photoUrl: ''
@@ -324,15 +326,25 @@ export default function Incubator({ profile, setProfile }: IncubatorProps) {
               <div key={pairingId} className="space-y-4">
                 <div className="flex items-center gap-2 px-1">
                   <div className="bg-slate-900 border border-slate-800 rounded-xl px-3 sm:px-4 py-2 flex items-center gap-3 shadow-md max-w-[85%] sm:max-w-full overflow-hidden">
-                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
-                      <div className="px-2 sm:px-2.5 py-1 rounded-lg border border-white/20 bg-white/5 flex-auto min-w-0 max-w-full">
-                        <span className="font-black text-white text-[10px] sm:text-[11px] uppercase tracking-tight block truncate">{pairing?.sireName || 'Sire'}</span>
-                      </div>
-                      <span className="text-slate-500 font-black text-[10px] sm:text-xs shrink-0">×</span>
-                      <div className="px-2 sm:px-2.5 py-1 rounded-lg border border-white/20 bg-white/5 flex-auto min-w-0 max-w-full">
-                        <span className="font-black text-white text-[10px] sm:text-[11px] uppercase tracking-tight block truncate">{pairing?.damName || 'Dam'}</span>
-                      </div>
-                    </div>
+                    {(() => {
+                      const sireInfo = pairing ? getParentLineageDisplay('sire', pairing, geckos) : null;
+                      const damInfo = pairing ? getParentLineageDisplay('dam', pairing, geckos) : null;
+                      return (
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+                          <div className="px-2 sm:px-2.5 py-1 rounded-lg border border-white/20 bg-white/5 flex-auto min-w-0 max-w-full">
+                            <span className="font-black text-white text-[10px] sm:text-[11px] uppercase tracking-tight block truncate">
+                              {sireInfo?.display || pairing?.sireName || 'Sire'}
+                            </span>
+                          </div>
+                          <span className="text-slate-500 font-black text-[10px] sm:text-xs shrink-0">×</span>
+                          <div className="px-2 sm:px-2.5 py-1 rounded-lg border border-white/20 bg-white/5 flex-auto min-w-0 max-w-full">
+                            <span className="font-black text-white text-[10px] sm:text-[11px] uppercase tracking-tight block truncate">
+                              {damInfo?.display || pairing?.damName || 'Dam'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="h-[1px] flex-1 bg-slate-200/60 min-w-[10px]"></div>
                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap shrink-0">

@@ -13,6 +13,7 @@ export default function PublicProfile() {
   const { id } = useParams<{ id: string }>();
   const [gecko, setGecko] = useState<Gecko | null>(null);
   const [farm, setFarm] = useState<UserProfile | null>(null);
+  const [relatedGeckos, setRelatedGeckos] = useState<Gecko[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -98,6 +99,26 @@ export default function PublicProfile() {
           }
         } catch (profileErr) {
           console.error('[DEBUG] Warning: Failed to fetch owner profile:', profileErr);
+        }
+
+        // Fetch parent geckos to resolve morph and name if needed
+        const parents: Gecko[] = [];
+        try {
+          if (geckoData.sireId) {
+            const sireSnap = await getDoc(doc(db, 'geckos', geckoData.sireId));
+            if (sireSnap.exists()) {
+              parents.push({ id: sireSnap.id, ...sireSnap.data() } as Gecko);
+            }
+          }
+          if (geckoData.damId) {
+            const damSnap = await getDoc(doc(db, 'geckos', geckoData.damId));
+            if (damSnap.exists()) {
+              parents.push({ id: damSnap.id, ...damSnap.data() } as Gecko);
+            }
+          }
+          setRelatedGeckos(parents);
+        } catch (parentErr) {
+          console.warn('[DEBUG] Failed to fetch parent geckos for lineage:', parentErr);
         }
 
       } catch (err) {
@@ -196,6 +217,7 @@ export default function PublicProfile() {
             gecko={gecko} 
             profile={farm} 
             isPublic={true} 
+            allGeckos={relatedGeckos}
           />
         </div>
 

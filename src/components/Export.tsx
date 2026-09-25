@@ -21,7 +21,7 @@ import { Gecko, UserProfile } from '../types';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, onSnapshot, doc, getDoc, getDocsFromServer } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, formatDate } from '../lib/utils';
+import { cn, formatDate, formatDateDMY, getParentLineageDisplay } from '../lib/utils';
 import PremiumModal from './PremiumModal';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -295,11 +295,11 @@ export default function Export({ profile }: ExportProps) {
       'Spesies': g.species || 'Leopard Gecko',
       'Morph': g.morph,
       'Jenis Kelamin': g.gender === 'male' ? 'M' : g.gender === 'female' ? 'F' : 'U',
-      'Tanggal Lahir': g.birthDate,
+      'Tanggal Lahir': formatDateDMY(g.birthDate),
       'Status': g.status === 'keep' ? 'Holdback' : (g.status || 'available'),
       'Project': g.project || '-',
-      'Sire': g.sireName || '-',
-      'Dam': g.damName || '-',
+      'Sire': getParentLineageDisplay('sire', g, geckos).display,
+      'Dam': getParentLineageDisplay('dam', g, geckos).display,
       'Strain': g.albinoStrain || '-',
       'Berat (g)': g.weight || '-',
       'Notes': g.info || '-'
@@ -374,12 +374,12 @@ export default function Export({ profile }: ExportProps) {
       g.species || 'Leopard Gecko',
       g.morph || '-',
       g.gender === 'male' ? 'Male' : g.gender === 'female' ? 'Female' : 'Unknown',
-      g.birthDate || '-',
+      formatDateDMY(g.birthDate),
       g.status === 'keep' ? 'Holdback' : (g.status || 'available'),
       g.weight ? `${g.weight}g` : '-',
       g.project || '-',
-      g.sireName || '-',
-      g.damName || '-'
+      getParentLineageDisplay('sire', g, geckos).display,
+      getParentLineageDisplay('dam', g, geckos).display
     ]);
 
     autoTable(doc, {
@@ -1130,21 +1130,27 @@ export default function Export({ profile }: ExportProps) {
                            </div>
                            <div className="flex flex-col justify-center pl-2 h-full">
                              <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">HATCH DATE</div>
-                             <div className="text-[7px] font-black text-black uppercase truncate leading-none">{gecko.birthDate || '-'}</div>
+                             <div className="text-[7px] font-black text-black uppercase truncate leading-none">{formatDateDMY(gecko.birthDate)}</div>
                            </div>
                          </div>
 
                          {/* SIRE & DAM */}
-                         <div className="grid grid-cols-2 gap-0 py-1 min-h-[26px] mt-[-1px] mb-0">
-                           <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
-                             <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">SIRE</div>
-                             <div className="text-[7px] font-bold text-slate-600 uppercase break-words line-clamp-2 italic leading-[1.1]">{gecko.sireName || '-'}</div>
-                           </div>
-                           <div className="flex flex-col justify-center pl-2 h-full mt-[3px]">
-                             <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-[-4px] mb-0.5">DAM</div>
-                             <div className="text-[7px] font-bold text-slate-600 uppercase break-words line-clamp-2 italic leading-[1.1] mt-0">{gecko.damName || '-'}</div>
-                           </div>
-                         </div>
+                         {(() => {
+                           const sireInfo = getParentLineageDisplay('sire', gecko, geckos);
+                           const damInfo = getParentLineageDisplay('dam', gecko, geckos);
+                           return (
+                             <div className="grid grid-cols-2 gap-0 py-1 min-h-[26px] mt-[-1px] mb-0">
+                               <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
+                                 <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">SIRE</div>
+                                 <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1]">{sireInfo.display}</div>
+                               </div>
+                               <div className="flex flex-col justify-center pl-2 h-full mt-[3px]">
+                                 <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-[-4px] mb-0.5">DAM</div>
+                                 <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1] mt-0">{damInfo.display}</div>
+                               </div>
+                             </div>
+                           );
+                         })()}
                        </div>
                      </div>
 
@@ -1404,6 +1410,7 @@ export default function Export({ profile }: ExportProps) {
                                       gecko={selectedGecko} 
                                       profile={profile} 
                                       scale={1} 
+                                      allGeckos={geckos}
                                     />
                                 </div>
                               )}
@@ -1468,21 +1475,27 @@ export default function Export({ profile }: ExportProps) {
                                                 </div>
                                                 <div className="flex flex-col justify-center pl-2 h-full">
                                                    <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">HATCH DATE</div>
-                                                   <div className="text-[7px] font-black text-black uppercase truncate leading-none">{selectedGecko.birthDate || '-'}</div>
+                                                   <div className="text-[7px] font-black text-black uppercase truncate leading-none">{formatDateDMY(selectedGecko.birthDate)}</div>
                                                 </div>
                                              </div>
 
                                              {/* SIRE & DAM */}
-                                             <div className="grid grid-cols-2 gap-0 py-1 min-h-[26px] mt-[-1px] mb-0">
-                                                <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
-                                                   <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">SIRE</div>
-                                                   <div className="text-[7px] font-bold text-slate-600 uppercase break-words line-clamp-2 italic leading-[1.1]">{selectedGecko.sireName || '-'}</div>
+                                             {(() => {
+                                               const sireInfo = getParentLineageDisplay('sire', selectedGecko, geckos);
+                                               const damInfo = getParentLineageDisplay('dam', selectedGecko, geckos);
+                                               return (
+                                                 <div className="grid grid-cols-2 gap-0 py-1 min-h-[26px] mt-[-1px] mb-0">
+                                                   <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
+                                                      <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">SIRE</div>
+                                                      <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1]">{sireInfo.display}</div>
+                                                   </div>
+                                                   <div className="flex flex-col justify-center pl-2 h-full mt-[3px]">
+                                                      <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-[-4px] mb-0.5">DAM</div>
+                                                      <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1] mt-0">{damInfo.display}</div>
+                                                   </div>
                                                 </div>
-                                                <div className="flex flex-col justify-center pl-2 h-full mt-[3px]">
-                                                   <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-[-4px] mb-0.5">DAM</div>
-                                                   <div className="text-[7px] font-bold text-slate-600 uppercase break-words line-clamp-2 italic leading-[1.1] mt-0">{selectedGecko.damName || '-'}</div>
-                                                </div>
-                                             </div>
+                                              );
+                                            })()}
                                           </div>
                                       </div>
 

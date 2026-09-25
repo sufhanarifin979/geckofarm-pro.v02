@@ -1,6 +1,6 @@
 import { CreditCard, Database, Trash2 } from 'lucide-react';
 import { Gecko, UserProfile } from '../types';
-import { cn } from '../lib/utils';
+import { cn, formatDateDMY, getParentLineageDisplay } from '../lib/utils';
 import { forwardRef, memo } from 'react';
 
 interface ProCardComponentProps {
@@ -8,14 +8,19 @@ interface ProCardComponentProps {
   profile: UserProfile | null;
   scale?: number;
   isPublic?: boolean;
+  allGeckos?: Gecko[];
 }
 
 export const ProCardComponent = memo(forwardRef<HTMLDivElement, ProCardComponentProps>(({ 
   gecko, 
   profile, 
   scale = 1,
-  isPublic = false 
+  isPublic = false,
+  allGeckos 
 }, ref) => {
+  const sireInfo = getParentLineageDisplay('sire', gecko, allGeckos);
+  const damInfo = getParentLineageDisplay('dam', gecko, allGeckos);
+
   return (
     <div 
       className={cn(
@@ -48,9 +53,9 @@ export const ProCardComponent = memo(forwardRef<HTMLDivElement, ProCardComponent
            {/* 2. Photo Area */}
            <div className="flex justify-center my-[20px] shrink-0">
               <div className="w-[60%] aspect-square overflow-hidden rounded-[16px] shadow-sm bg-slate-50 border border-slate-100">
-                 {gecko.photoUrl ? (
+                 {(gecko.photoUrl || gecko.photos?.[0]) ? (
                    <img 
-                     src={gecko.photoUrl} 
+                     src={gecko.photoUrl || gecko.photos?.[0]} 
                      className="w-full h-full object-cover" 
                      crossOrigin="anonymous"
                    />
@@ -109,24 +114,34 @@ export const ProCardComponent = memo(forwardRef<HTMLDivElement, ProCardComponent
                   <div className="space-y-1 pl-6">
                      <div className="text-[14px] font-[700] text-[#999999] uppercase tracking-[1px]">Hatch Date</div>
                      <div className="text-[32px] font-[800] text-[#111827] truncate">
-                        {gecko.birthDate || 'N/A'}
+                        {formatDateDMY(gecko.birthDate)}
                      </div>
                   </div>
                </div>
                
                {/* Block 4: Lineage */}
                <div className="grid grid-cols-2 py-4 border-b border-[#E5E7EB]">
-                  <div className="space-y-1 pr-6 border-r border-[#E5E7EB]">
+                  <div className="space-y-0.5 pr-6 border-r border-[#E5E7EB]">
                      <div className="text-[14px] font-[700] text-[#999999] uppercase tracking-[1px]">Sire Lineage</div>
-                     <div className="text-[26px] font-[800] italic text-[#111827] uppercase leading-tight line-clamp-2">
-                        {gecko.sireName || 'Unknown'}
+                     <div className="text-[24px] font-[800] italic text-[#111827] uppercase leading-tight line-clamp-2">
+                        {sireInfo.morph || sireInfo.name || 'Unknown'}
                      </div>
+                     {sireInfo.name && sireInfo.morph && sireInfo.name.toLowerCase() !== sireInfo.morph.toLowerCase() && (
+                        <div className="text-[15px] font-[700] text-[#64748b] uppercase tracking-wide truncate">
+                           ({sireInfo.name})
+                        </div>
+                     )}
                   </div>
-                  <div className="space-y-1 pl-6">
+                  <div className="space-y-0.5 pl-6">
                      <div className="text-[14px] font-[700] text-[#999999] uppercase tracking-[1px]">Dam Lineage</div>
-                     <div className="text-[26px] font-[800] italic text-[#111827] uppercase leading-tight line-clamp-2">
-                        {gecko.damName || 'Unknown'}
+                     <div className="text-[24px] font-[800] italic text-[#111827] uppercase leading-tight line-clamp-2">
+                        {damInfo.morph || damInfo.name || 'Unknown'}
                      </div>
+                     {damInfo.name && damInfo.morph && damInfo.name.toLowerCase() !== damInfo.morph.toLowerCase() && (
+                        <div className="text-[15px] font-[700] text-[#64748b] uppercase tracking-wide truncate">
+                           ({damInfo.name})
+                        </div>
+                     )}
                   </div>
                </div>
                

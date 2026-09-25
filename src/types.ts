@@ -10,11 +10,14 @@ export interface Gecko {
   damId: string;
   sireName: string;
   damName: string;
+  sireMorph?: string;
+  damMorph?: string;
   gender: 'male' | 'female' | 'unsex';
   status: 'available' | 'keep' | 'sold' | 'dead';
   info: string;
   note: string;
   photoUrl: string;
+  photos?: string[];
   ownerId: string;
   albinoStrain?: 'None' | 'Tremper' | 'Bell' | 'Rainwater';
   weight?: number;
@@ -42,6 +45,8 @@ export interface Pairing {
   damId: string;
   sireName?: string;
   damName?: string;
+  sireMorph?: string;
+  damMorph?: string;
   pairingDate: string;
   ownerId: string;
   clutchCount: number;
