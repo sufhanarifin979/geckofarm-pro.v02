@@ -24,6 +24,8 @@ export interface Gecko {
   createdAt?: any;
   purchasePrice?: number;
   species?: Species;
+  enclosure?: string;
+  price?: number;
 }
 
 export interface FinanceTransaction {
@@ -116,4 +118,57 @@ export interface MorphRelation {
   id?: string;
   morph_id: string;
   related_id: string;
+}
+
+export interface ReferenceLink {
+  title: string;
+  url: string;
+}
+
+export interface GeneticWarning {
+  templateId: 'enigma' | 'lemon_frost' | 'white_yellow' | 'super_form_lethal' | 'incompatible_strain' | 'custom' | string;
+  title: string;
+  description: string;
+  type?: 'genetic_warning' | 'health_risk';
+}
+
+export type MorphCategory = 'Base' | 'Albino' | 'Snow' | 'Combo' | 'Line-bred' | 'Pattern' | 'Special' | string;
+export type MorphRarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary' | 'Holy Grail';
+export type MorphInheritance = 'Recessive' | 'Incomplete Dominant' | 'Dominant' | 'Line-bred' | 'Polygenetic' | 'Polygenic' | string;
+
+export interface MorphEntry {
+  id?: string;
+  name: string;
+  slug: string;
+  category: MorphCategory[] | MorphCategory;
+  rarity: MorphRarity;
+  inheritance_type: MorphInheritance[] | MorphInheritance;
+  inheritanceType?: MorphInheritance[] | MorphInheritance;
+  description: string;
+  genetics?: string;
+  genetic_formula?: string[];
+  geneticFormula?: string[];
+  visual_traits?: string[];
+  visualTraits?: string[];
+  genetic_signatures?: string[];
+  geneticSignatures?: string[];
+  combo_compatibility?: string[];
+  comboCompatibility?: string[];
+  combo_potential?: string[];
+  comboPotential?: string[];
+  warnings?: string;
+  genetic_warnings?: GeneticWarning[];
+  geneticWarnings?: GeneticWarning[];
+  breeder_notes?: string;
+  image_url?: string;
+  image_url_baby?: string;
+  image_url_eye?: string;
+  selection_priority?: string[];
+  tags?: string[];
+  reference_links?: ReferenceLink[];
+  credited_breeders?: string[];
+  discovery_year?: number | string;
+  species?: Species;
+  created_at?: any;
+  updated_at?: any;
 }
