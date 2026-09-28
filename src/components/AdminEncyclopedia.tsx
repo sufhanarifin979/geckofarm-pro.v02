@@ -7,10 +7,23 @@ import {
   addDoc, 
   updateDoc, 
   deleteDoc, 
-  serverTimestamp,
-  orderBy
+  serverTimestamp, 
+  orderBy 
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, registerListener, auth, getCachedMorphs, setCachedMorphs, clearCachedMorphs } from '../lib/firebase';
+import { autoCropToSquare } from '../lib/imageUtils';
+import { MorphEntry, ReferenceLink, GeneticWarning } from '../types';
+import { SearchableMultiSelect } from './ui/SearchableMultiSelect';
+import { GeneticWarningEditor } from './ui/GeneticWarningEditor';
+import { 
+  normalizeCategories, 
+  normalizeInheritance, 
+  normalizeRarity, 
+  normalizeGeneticFormula, 
+  normalizeGeneticWarnings, 
+  normalizeGeneticSignatures, 
+  normalizeComboPotential 
+} from '../lib/morphNormalizer';
 import { 
   Search, 
   Plus, 
@@ -28,37 +41,112 @@ import {
   User,
   Loader2,
   ChevronRight,
-  Eye
+  Eye,
+  Camera,
+  Upload,
+  Layers,
+  Calendar,
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-interface ReferenceLink {
-  title: string;
-  url: string;
-}
+const CATEGORY_OPTIONS = ['Base', 'Albino', 'Snow', 'Combo', 'Line-bred', 'Pattern', 'Special'];
+const INHERITANCE_OPTIONS = ['Recessive', 'Incomplete Dominant', 'Dominant', 'Line-bred'];
+const RARITY_OPTIONS: ('Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary')[] = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 
-interface MorphEntry {
-  id?: string;
-  name: string;
-  slug: string;
-  category: 'Base' | 'Albino' | 'Snow' | 'Combo' | 'Line-bred' | 'Pattern' | 'Special';
-  rarity: 'Common' | 'Uncommon' | 'Rare' | 'Legendary' | 'Holy Grail';
-  inheritance_type: 'Recessive' | 'Incomplete Dominant' | 'Dominant' | 'Polygenetic' | 'Line-bred';
-  description: string;
-  genetics?: string;
-  visual_traits?: string[];
-  combo_compatibility?: string[];
-  warnings?: string;
-  breeder_notes?: string;
-  image_url?: string;
-  selection_priority?: string[];
-  tags?: string[];
-  reference_links?: ReferenceLink[];
-  credited_breeders?: string[];
-  created_at?: any;
-  updated_at?: any;
-  species?: 'Leopard Gecko' | 'African Fat-Tailed Gecko';
-}
+const GENETIC_FORMULA_OPTIONS = [
+  'Tremper Albino',
+  'Bell Albino',
+  'Rainwater Albino',
+  'Eclipse',
+  'Blizzard',
+  'Murphy Patternless',
+  'Mack Snow',
+  'Super Snow',
+  'Giant',
+  'Super Giant',
+  'TUG Snow',
+  'White & Yellow',
+  'Enigma',
+  'Lemon Frost',
+  'Tangerine',
+  'Patternless Stripe',
+  'Marble Eye',
+  'Black Night',
+  'Blood',
+  'Diablo Blanco',
+  'RAPTOR',
+  'RADAR',
+  'Typhoon',
+  'Nova',
+  'Stealth',
+  'Dreamsickle',
+  'Vortex',
+  'Firewater',
+  'Oreo',
+  'Whiteout',
+  'Zulu',
+  'Ghost',
+  'Caramel',
+  'Amelanistic',
+  'Zero',
+  'Stinger',
+  'Stripe',
+  'Banded'
+];
+
+const GENETIC_SIGNATURE_OPTIONS = [
+  'Red Eyes',
+  'White Tail',
+  'High Contrast',
+  'Tangerine',
+  'Patternless',
+  'Dark Eyes',
+  'Snake Eyes',
+  'Solid Black Eyes',
+  'Solid Ruby Eyes',
+  'White Socks',
+  'Lavender Banding',
+  'High Yellow',
+  'Carrot Tail',
+  'Carrot Head',
+  'Reverse Stripe',
+  'Pied Markings',
+  'Soft Velvety Dorsal',
+  'Hypo (Reduced Spotting)',
+  'Super Hypo (Zero Body Spots)',
+  'Paradox Spotting',
+  'All-Over Fine Spotting',
+  'Jungle Pattern',
+  'Bold Stripe'
+];
+
+const COMBO_POTENTIAL_OPTIONS = [
+  'Eclipse',
+  'Enigma',
+  'Mack Snow',
+  'Super Snow',
+  'Tremper Albino',
+  'Bell Albino',
+  'Rainwater Albino',
+  'White & Yellow',
+  'Murphy Patternless',
+  'Blizzard',
+  'Tangerine',
+  'Giant',
+  'Lemon Frost',
+  'Black Night',
+  'Blood',
+  'Marble Eye',
+  'Diablo Blanco',
+  'RAPTOR',
+  'RADAR',
+  'Typhoon',
+  'Oreo (AFT)',
+  'Whiteout (AFT)',
+  'Zulu (AFT)',
+  'Caramel (AFT)'
+];
 
 export default function AdminEncyclopedia() {
   const [morphs, setMorphs] = useState<MorphEntry[]>([]);
@@ -74,25 +162,179 @@ export default function AdminEncyclopedia() {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState<Partial<MorphEntry>>({
+  const [formData, setFormData] = useState<{
+    name: string;
+    slug: string;
+    category: string[];
+    rarity: 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
+    inheritance_type: string[];
+    description: string;
+    genetics: string;
+    genetic_formula: string[];
+    visual_traits: string[];
+    genetic_signatures: string[];
+    combo_compatibility: string[];
+    combo_potential: string[];
+    warnings: string;
+    genetic_warnings: GeneticWarning[];
+    breeder_notes: string;
+    image_url: string;
+    image_url_baby: string;
+    image_url_eye: string;
+    selection_priority: string[];
+    tags: string[];
+    reference_links: ReferenceLink[];
+    credited_breeders: string[];
+    discovery_year: string;
+    species: any;
+  }>({
     name: '',
     slug: '',
-    category: 'Base',
+    category: ['Base'],
     rarity: 'Common',
-    inheritance_type: 'Recessive',
+    inheritance_type: ['Recessive'],
     description: '',
     genetics: '',
+    genetic_formula: [],
     visual_traits: [],
+    genetic_signatures: [],
     combo_compatibility: [],
+    combo_potential: [],
     warnings: '',
+    genetic_warnings: [],
     breeder_notes: '',
     image_url: '',
+    image_url_baby: '',
+    image_url_eye: '',
     selection_priority: [],
     tags: [],
     reference_links: [],
     credited_breeders: [],
+    discovery_year: '',
     species: 'Leopard Gecko'
   });
+
+  const applyPreset = (presetName: string) => {
+    if (presetName === 'albino') {
+      setFormData(prev => ({
+        ...prev,
+        category: ['Albino'],
+        inheritance_type: ['Recessive'],
+        rarity: 'Common',
+        genetics: 'Tremper Albino',
+        genetic_formula: ['Tremper Albino'],
+        visual_traits: ['Amelanistik (Hilangnya pigmen hitam melanin)', 'Mata berwarna pink/perak dengan urat merah', 'Pola tubuh coklat keunguan/oranye'],
+        genetic_signatures: ['Amelanistik (Hilangnya pigmen hitam melanin)', 'Mata berwarna pink/perak dengan urat merah', 'Pola tubuh coklat keunguan/oranye'],
+        selection_priority: ['Intensitas kejernihan warna latar', 'Ketiadaan pigmen hitam', 'Kesehatan mata dan sensitivitas cahaya'],
+        breeder_notes: 'Albino terdiri dari 3 strain yang tidak kompatibel: Tremper, Bell, dan Rainwater. Jangan pernah menyilangkan antar strain albino berbeda (strain crossing) karena akan mengaburkan genetika murni.',
+        warnings: '',
+        genetic_warnings: [{
+          templateId: 'custom',
+          title: 'Incompatible Albino Strain',
+          description: 'Tidak kompatibel antar sesama albino (Tremper, Bell, Rainwater). Jangan menyilangkan antar strain albino berbeda.',
+          type: 'genetic_warning'
+        }]
+      }));
+    } else if (presetName === 'tangerine') {
+      setFormData(prev => ({
+        ...prev,
+        category: ['Line-bred'],
+        inheritance_type: ['Line-bred'],
+        rarity: 'Uncommon',
+        genetics: 'Tangerine',
+        genetic_formula: ['Tangerine'],
+        visual_traits: ['Warna oranye cerah pada punggung & kepala', 'Carrot Tail (>15% pangkal ekor oranye)', 'Carrot Head'],
+        genetic_signatures: ['Warna oranye cerah pada punggung & kepala', 'Carrot Tail (>15% pangkal ekor oranye)', 'Carrot Head'],
+        selection_priority: ['Persentase cakupan oranye (>80%)', 'Tingkat pekat Carrot Tail', 'Kontras warna oranye tanpa bintik gelap'],
+        breeder_notes: 'Pewarisan poligenik kumulatif. Hasil anakan sangat bergantung pada seleksi ketat kedua indukan dengan pigmen oranye tertinggi.',
+        warnings: '',
+        genetic_warnings: []
+      }));
+    } else if (presetName === 'snow') {
+      setFormData(prev => ({
+        ...prev,
+        category: ['Snow'],
+        inheritance_type: ['Incomplete Dominant'],
+        rarity: 'Common',
+        genetics: 'Mack Snow',
+        genetic_formula: ['Mack Snow'],
+        visual_traits: ['Warna dasar putih/krem saat baby', 'Bercak hitam kontras', 'Menguning secara bertahap saat dewasa'],
+        genetic_signatures: ['Warna dasar putih/krem saat baby', 'Bercak hitam kontras', 'Menguning secara bertahap saat dewasa'],
+        selection_priority: ['Kekontrasan warna hitam-putih saat menetas', 'Tingkat keputihan dasar tubuh'],
+        breeder_notes: 'Bentuk homozigotnya adalah Super Snow (MS/MS) dengan pola bintik kecil halus (all-over spotting) dan mata solid black eclipse.',
+        warnings: '',
+        genetic_warnings: []
+      }));
+    } else if (presetName === 'eclipse') {
+      setFormData(prev => ({
+        ...prev,
+        category: ['Base'],
+        inheritance_type: ['Recessive'],
+        rarity: 'Uncommon',
+        genetics: 'Eclipse',
+        genetic_formula: ['Eclipse'],
+        visual_traits: ['Solid black eyes (atau snake eyes 50%)', 'Pied white nose & white socks/kaki putih', 'High contrast tail'],
+        genetic_signatures: ['Solid black eyes (atau snake eyes 50%)', 'Pied white nose & white socks/kaki putih', 'High contrast tail'],
+        selection_priority: ['Persentase solid eye (100% full eclipse)', 'White nose / pied markings'],
+        breeder_notes: 'Gen eclipse sering digabung dengan Tremper Albino untuk menghasilkan RAPTOR, atau dengan Bell Albino untuk RADAR.',
+        warnings: '',
+        genetic_warnings: []
+      }));
+    } else if (presetName === 'combo') {
+      setFormData(prev => ({
+        ...prev,
+        category: ['Combo'],
+        inheritance_type: ['Recessive'],
+        rarity: 'Rare',
+        genetics: 'Tremper Albino + Eclipse',
+        genetic_formula: ['Tremper Albino', 'Eclipse'],
+        visual_traits: ['Kombinasi minimal 2 gen visual berbeda', 'Mata albino/eclipse', 'Tubuh tanpa pola atau berpola unik'],
+        genetic_signatures: ['Kombinasi minimal 2 gen visual berbeda', 'Mata albino/eclipse', 'Tubuh tanpa pola atau berpola unik'],
+        selection_priority: ['Ekspresi penuh seluruh gen penyusun', 'Purity indukan test-proven'],
+        breeder_notes: 'Pastikan garis keturunan jelas untuk mengonfirmasi status het (heterozygous) bawaan.',
+        warnings: '',
+        genetic_warnings: []
+      }));
+    } else if (presetName === 'aft') {
+      setFormData(prev => ({
+        ...prev,
+        species: 'African Fat-Tailed Gecko',
+        category: ['Base'],
+        inheritance_type: ['Incomplete Dominant'],
+        rarity: 'Rare',
+        genetics: 'Whiteout',
+        genetic_formula: ['Whiteout'],
+        visual_traits: ['Pola putih melebar pada dorsal & leher', 'Kontras tinggi dengan garis coklat gelap'],
+        genetic_signatures: ['Pola putih melebar pada dorsal & leher', 'Kontras tinggi dengan garis coklat gelap'],
+        selection_priority: ['Pola kontras tajam', 'Kesehatan fisik'],
+        breeder_notes: 'Populer untuk kombinasi dengan Oreo atau Zulu.',
+        warnings: 'PERINGATAN: Persilangan Whiteout x Whiteout menghasilkan Super Whiteout yang homozigot lethal (mati dalam telur).',
+        genetic_warnings: [{
+          templateId: 'super_form_lethal',
+          title: 'Super Form Lethal Warning',
+          description: 'Persilangan Whiteout x Whiteout menghasilkan Super Whiteout yang homozigot lethal (mati dalam telur). Hindari perkawinan Whiteout x Whiteout.',
+          type: 'genetic_warning'
+        }]
+      }));
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, targetField: 'image_url' | 'image_url_baby' | 'image_url_eye') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result as string;
+        const cropped = await autoCropToSquare(base64, 800);
+        setFormData(prev => ({ ...prev, [targetField]: cropped }));
+      } catch (err) {
+        console.error("Failed to process image:", err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -169,8 +411,34 @@ export default function AdminEncyclopedia() {
 
     setIsSaving(true);
     try {
+      const cats = normalizeCategories(formData.category);
+      const inhs = normalizeInheritance(formData.inheritance_type);
+      const rar = normalizeRarity(formData.rarity);
+      const formulas = normalizeGeneticFormula(formData);
+      const warns = normalizeGeneticWarnings(formData);
+      const sigs = normalizeGeneticSignatures(formData);
+      const combos = normalizeComboPotential(formData);
+
       const payload = {
         ...formData,
+        category: cats,
+        inheritance_type: inhs,
+        inheritanceType: inhs,
+        rarity: rar,
+        genetic_formula: formulas,
+        geneticFormula: formulas,
+        genetics: formulas.join(' + '),
+        genetic_warnings: warns,
+        geneticWarnings: warns,
+        warnings: warns.map(w => `${w.title}: ${w.description}`).join(' | '),
+        visual_traits: sigs,
+        visualTraits: sigs,
+        genetic_signatures: sigs,
+        geneticSignatures: sigs,
+        combo_compatibility: combos,
+        comboCompatibility: combos,
+        combo_potential: combos,
+        comboPotential: combos,
         updated_at: serverTimestamp()
       };
 
@@ -218,37 +486,90 @@ export default function AdminEncyclopedia() {
     setFormData({
       name: '',
       slug: '',
-      category: 'Base',
+      category: ['Base'],
       rarity: 'Common',
-      inheritance_type: 'Recessive',
+      inheritance_type: ['Recessive'],
       description: '',
       genetics: '',
+      genetic_formula: [],
       visual_traits: [],
+      genetic_signatures: [],
       combo_compatibility: [],
+      combo_potential: [],
       warnings: '',
+      genetic_warnings: [],
       breeder_notes: '',
       image_url: '',
+      image_url_baby: '',
+      image_url_eye: '',
       selection_priority: [],
       tags: [],
       reference_links: [],
       credited_breeders: [],
+      discovery_year: '',
       species: 'Leopard Gecko'
     });
   };
 
   const openEdit = (morph: MorphEntry) => {
     setEditingMorph(morph);
+    const cats = normalizeCategories(morph.category);
+    const inhs = normalizeInheritance(morph.inheritance_type);
+    const rar = normalizeRarity(morph.rarity);
+    const formulas = normalizeGeneticFormula(morph);
+    const warns = normalizeGeneticWarnings(morph);
+    const sigs = normalizeGeneticSignatures(morph);
+    const combos = normalizeComboPotential(morph);
+
     setFormData({
-      ...morph,
+      name: morph.name || '',
+      slug: morph.slug || '',
+      category: cats,
+      rarity: rar,
+      inheritance_type: inhs,
+      description: morph.description || '',
+      genetics: formulas.join(' + ') || morph.genetics || '',
+      genetic_formula: formulas,
+      visual_traits: sigs,
+      genetic_signatures: sigs,
+      combo_compatibility: combos,
+      combo_potential: combos,
+      warnings: morph.warnings || '',
+      genetic_warnings: warns,
+      breeder_notes: morph.breeder_notes || '',
+      image_url: morph.image_url || '',
+      image_url_baby: morph.image_url_baby || '',
+      image_url_eye: morph.image_url_eye || '',
+      selection_priority: morph.selection_priority || [],
+      tags: morph.tags || [],
+      reference_links: morph.reference_links || [],
+      credited_breeders: morph.credited_breeders || [],
+      discovery_year: morph.discovery_year ? String(morph.discovery_year) : '',
       species: morph.species || 'Leopard Gecko'
     });
     setIsModalOpen(true);
   };
 
   const filteredMorphs = morphs.filter(m => {
-    const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          m.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || m.category === filterCategory;
+    const q = searchTerm.toLowerCase().trim();
+    const cats = normalizeCategories(m.category);
+    const inhs = normalizeInheritance(m.inheritance_type);
+    const formulas = normalizeGeneticFormula(m);
+    const sigs = normalizeGeneticSignatures(m);
+    const combos = normalizeComboPotential(m);
+
+    const matchesSearch = !q || (
+      m.name.toLowerCase().includes(q) || 
+      m.description.toLowerCase().includes(q) ||
+      cats.some(c => c.toLowerCase().includes(q)) ||
+      inhs.some(i => i.toLowerCase().includes(q)) ||
+      formulas.some(f => f.toLowerCase().includes(q)) ||
+      sigs.some(s => s.toLowerCase().includes(q)) ||
+      combos.some(c => c.toLowerCase().includes(q)) ||
+      m.tags?.some(t => t.toLowerCase().includes(q))
+    );
+
+    const matchesCategory = filterCategory === 'all' || cats.includes(filterCategory);
     return matchesSearch && matchesCategory;
   });
 
@@ -326,7 +647,9 @@ export default function AdminEncyclopedia() {
                   </div>
                   <div>
                     <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-sm leading-tight">{morph.name}</h3>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{morph.category} • {morph.rarity}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      {normalizeCategories(morph.category).join(', ')} • {normalizeRarity(morph.rarity)}
+                    </span>
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -346,14 +669,15 @@ export default function AdminEncyclopedia() {
               <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${
-                    morph.rarity === 'Legendary' || morph.rarity === 'Holy Grail' ? 'bg-amber-500 text-white' :
-                    morph.rarity === 'Rare' ? 'bg-indigo-500 text-white' :
+                    normalizeRarity(morph.rarity) === 'Legendary' ? 'bg-amber-500 text-white' :
+                    normalizeRarity(morph.rarity) === 'Epic' ? 'bg-purple-600 text-white' :
+                    normalizeRarity(morph.rarity) === 'Rare' ? 'bg-indigo-500 text-white' :
                     'bg-slate-100 dark:bg-slate-800 text-slate-400'
                   }`}>
-                    {morph.rarity}
+                    {normalizeRarity(morph.rarity)}
                   </span>
-                  <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">
-                    {morph.inheritance_type}
+                  <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter truncate max-w-[140px]">
+                    {normalizeInheritance(morph.inheritance_type).join(', ')}
                   </span>
                 </div>
                 <button 
@@ -473,9 +797,11 @@ export default function AdminEncyclopedia() {
                      </div>
                      <div className="space-y-6">
                         <div className="space-y-2">
-                           <div className="flex gap-2">
-                              <span className="px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[8px] font-black uppercase">{formData.category}</span>
-                              <span className="px-2 py-0.5 bg-amber-500 text-white rounded-md text-[8px] font-black uppercase">{formData.rarity}</span>
+                           <div className="flex gap-2 flex-wrap">
+                              {normalizeCategories(formData.category).map(c => (
+                                <span key={c} className="px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[8px] font-black uppercase">{c}</span>
+                              ))}
+                              <span className="px-2 py-0.5 bg-amber-500 text-white rounded-md text-[8px] font-black uppercase">{normalizeRarity(formData.rarity)}</span>
                            </div>
                            <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase leading-none">{formData.name || 'Morph Name'}</h3>
                         </div>
@@ -483,18 +809,78 @@ export default function AdminEncyclopedia() {
                         
                         <div className="grid grid-cols-2 gap-4">
                            <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Genetics</span>
-                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">{formData.genetics || 'Not specified'}</p>
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Genetic Formula</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {normalizeGeneticFormula(formData).map(f => (
+                                  <span key={f} className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 rounded text-[10px] font-bold font-mono">{f}</span>
+                                ))}
+                                {normalizeGeneticFormula(formData).length === 0 && <span className="text-xs text-slate-400 font-bold">Not specified</span>}
+                              </div>
                            </div>
                            <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Inheritance</span>
-                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">{formData.inheritance_type}</p>
+                              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-1">{normalizeInheritance(formData.inheritance_type).join(', ')}</p>
                            </div>
                         </div>
                      </div>
                   </div>
                 ) : (
                   <form onSubmit={handleSave} className="space-y-8 max-w-4xl mx-auto">
+                    {/* Quick Presets Bar */}
+                    <div className="p-5 bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-amber-500/10 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                          <Sparkles size={14} className="text-amber-500" />
+                          Template Cepat (1-Click Fill Preset)
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">Klik untuk mengisi field otomatis</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('albino')}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          🔴 Albino (Recessive)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('tangerine')}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          🟠 Tangerine (Line-Bred)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('snow')}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          ⚪ Mack Snow (Incomplete Dom)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('eclipse')}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          👁️ Eclipse (Solid Eye)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('combo')}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          🟣 Multigenic Combo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset('aft')}
+                          className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:text-emerald-600 transition-all cursor-pointer shadow-2xs"
+                        >
+                          🦎 AFT (African Fat-Tailed)
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Basic Info */}
                     <section className="space-y-6">
                       <div className="flex items-center gap-2 text-emerald-500">
@@ -527,49 +913,57 @@ export default function AdminEncyclopedia() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <SearchableMultiSelect
+                          label="Category (Multi-Select)"
+                          sublabel="Bisa pilih lebih dari satu kategori (chips)"
+                          placeholder="Pilih atau cari kategori..."
+                          selected={formData.category}
+                          onChange={(cats) => setFormData(prev => ({ ...prev, category: cats }))}
+                          options={CATEGORY_OPTIONS}
+                          allowCustom={true}
+                          customAddText="+ Tambah Kategori Baru"
+                          chipColor="emerald"
+                          icon={<Layers size={14} />}
+                        />
+
+                        <SearchableMultiSelect
+                          label="Inheritance Type (Multi-Select)"
+                          sublabel="Contoh: Recessive, Line-bred"
+                          placeholder="Pilih tipe penurunan gen..."
+                          selected={formData.inheritance_type}
+                          onChange={(inhs) => setFormData(prev => ({ ...prev, inheritance_type: inhs }))}
+                          options={INHERITANCE_OPTIONS}
+                          allowCustom={true}
+                          customAddText="+ Tambah Tipe Hereditas"
+                          chipColor="blue"
+                          icon={<Dna size={14} />}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                            <Sparkles size={14} />
+                            Rarity Tier (Single-Select)
+                          </label>
                           <select 
-                            value={formData.category}
-                            onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as any }))}
-                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all"
-                          >
-                            {['Base', 'Albino', 'Snow', 'Combo', 'Line-bred', 'Pattern', 'Special'].map(v => (
-                              <option key={v} value={v}>{v}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rarity Tier</label>
-                          <select 
-                            value={formData.rarity}
+                            value={normalizeRarity(formData.rarity)}
                             onChange={(e) => setFormData(prev => ({ ...prev, rarity: e.target.value as any }))}
-                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all"
+                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all cursor-pointer"
                           >
-                            {['Common', 'Uncommon', 'Rare', 'Legendary', 'Holy Grail'].map(v => (
+                            {RARITY_OPTIONS.map(v => (
                               <option key={v} value={v}>{v}</option>
                             ))}
                           </select>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Inheritance Type</label>
-                          <select 
-                            value={formData.inheritance_type}
-                            onChange={(e) => setFormData(prev => ({ ...prev, inheritance_type: e.target.value as any }))}
-                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all"
-                          >
-                            {['Recessive', 'Incomplete Dominant', 'Dominant', 'Polygenetic', 'Line-bred'].map(v => (
-                              <option key={v} value={v}>{v}</option>
-                            ))}
-                          </select>
-                        </div>
+
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Species</label>
                           <select 
                             value={formData.species || 'Leopard Gecko'}
                             onChange={(e) => setFormData(prev => ({ ...prev, species: e.target.value as any }))}
-                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all"
+                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none transition-all cursor-pointer"
                           >
                             <option value="Leopard Gecko">Leopard Gecko</option>
                             <option value="African Fat-Tailed Gecko">African Fat-Tailed Gecko</option>
@@ -578,22 +972,117 @@ export default function AdminEncyclopedia() {
                       </div>
                     </section>
 
-                    {/* Media & Details */}
+                    {/* Media & Multi-Stage Photos */}
                     <section className="space-y-6">
                       <div className="flex items-center gap-2 text-indigo-500">
                         <Sparkles size={16} />
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Media & Visual Evidence</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Media & Multi-Stage Photos (Dewasa, Baby, Mata)</h4>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">External Image URL</label>
-                        <input 
-                          type="url"
-                          value={formData.image_url}
-                          onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                          className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-medium text-sm focus:border-emerald-500 transition-all font-mono"
-                          placeholder="https://images.unsplash.com/..."
-                        />
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        {/* 1. Adult Image */}
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">Foto Dewasa (Adult)</span>
+                            <span className="text-[9px] font-bold text-emerald-500 uppercase">Utama</span>
+                          </div>
+
+                          <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-xl overflow-hidden relative flex items-center justify-center border border-slate-300 dark:border-slate-700">
+                            {formData.image_url ? (
+                              <img src={formData.image_url} alt="Adult Preview" className="w-full h-full object-cover" />
+                            ) : (
+                              <Dna size={28} className="text-slate-400" />
+                            )}
+                          </div>
+
+                          <label className="w-full py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+                            <Upload size={13} /> Upload File
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'image_url')} 
+                            />
+                          </label>
+
+                          <input 
+                            type="url"
+                            value={formData.image_url || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-[11px] outline-none"
+                            placeholder="atau URL gambar..."
+                          />
+                        </div>
+
+                        {/* 2. Baby Image */}
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">Foto Anakan (Baby)</span>
+                            <span className="text-[9px] font-bold text-amber-500 uppercase">Opsional</span>
+                          </div>
+
+                          <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-xl overflow-hidden relative flex items-center justify-center border border-slate-300 dark:border-slate-700">
+                            {formData.image_url_baby ? (
+                              <img src={formData.image_url_baby} alt="Baby Preview" className="w-full h-full object-cover" />
+                            ) : (
+                              <Dna size={28} className="text-slate-400" />
+                            )}
+                          </div>
+
+                          <label className="w-full py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+                            <Upload size={13} /> Upload File
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'image_url_baby')} 
+                            />
+                          </label>
+
+                          <input 
+                            type="url"
+                            value={formData.image_url_baby || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, image_url_baby: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-[11px] outline-none"
+                            placeholder="atau URL gambar..."
+                          />
+                        </div>
+
+                        {/* 3. Eye Close-Up Image */}
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">Detail Mata (Eye Focus)</span>
+                            <span className="text-[9px] font-bold text-indigo-500 uppercase">Opsional</span>
+                          </div>
+
+                          <div className="aspect-square bg-slate-200 dark:bg-slate-800 rounded-xl overflow-hidden relative flex items-center justify-center border border-slate-300 dark:border-slate-700">
+                            {formData.image_url_eye ? (
+                              <img src={formData.image_url_eye} alt="Eye Preview" className="w-full h-full object-cover" />
+                            ) : (
+                              <Eye size={28} className="text-slate-400" />
+                            )}
+                          </div>
+
+                          <label className="w-full py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs">
+                            <Upload size={13} /> Upload File
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => handleFileUpload(e, 'image_url_eye')} 
+                            />
+                          </label>
+
+                          <input 
+                            type="url"
+                            value={formData.image_url_eye || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, image_url_eye: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-[11px] outline-none"
+                            placeholder="atau URL gambar..."
+                          />
+                        </div>
+
                       </div>
 
                       <div className="space-y-2">
@@ -615,56 +1104,70 @@ export default function AdminEncyclopedia() {
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Scientific & Genetic Profile</h4>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Genetic Formula</label>
-                          <input 
-                            type="text"
-                            value={formData.genetics}
-                            onChange={(e) => setFormData(prev => ({ ...prev, genetics: e.target.value }))}
-                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-mono text-sm focus:border-emerald-500 transition-all font-bold"
-                            placeholder="e.g. bb/ee"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Genetic Warnings</label>
-                          <input 
-                            type="text"
-                            value={formData.warnings}
-                            onChange={(e) => setFormData(prev => ({ ...prev, warnings: e.target.value }))}
-                            className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/30 rounded-2xl font-medium text-sm focus:border-rose-500 transition-all text-rose-600 font-bold"
-                            placeholder="e.g. Incompatible with other albino strains."
-                          />
-                        </div>
-                      </div>
+                      {/* 4. Genetic Formula (Multi-Select) */}
+                      <SearchableMultiSelect
+                        label="Genetic Formula (Multi-Select)"
+                        sublabel="Komponen genetik terstruktur (contoh: Tremper Albino, Eclipse)"
+                        placeholder="Cari gen atau ketik formula baru..."
+                        selected={formData.genetic_formula || []}
+                        onChange={(formulas) => setFormData(prev => ({ 
+                          ...prev, 
+                          genetic_formula: formulas,
+                          genetics: formulas.join(' + ')
+                        }))}
+                        options={GENETIC_FORMULA_OPTIONS}
+                        allowCustom={true}
+                        customAddText="+ Add New Genetic Formula"
+                        chipColor="indigo"
+                        icon={<Dna size={14} />}
+                      />
+
+                      {/* 5. Genetic Warning (Template Warning Selector) */}
+                      <GeneticWarningEditor
+                        warnings={formData.genetic_warnings || []}
+                        onChange={(warns) => setFormData(prev => ({
+                          ...prev,
+                          genetic_warnings: warns,
+                          warnings: warns.map(w => `${w.title}: ${w.description}`).join(' | ')
+                        }))}
+                      />
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Genetic Signatures (Visual Traits)</label>
-                          <div className="space-y-2">
-                            <input 
-                              type="text"
-                              value={formData.visual_traits?.join(', ') || ''}
-                              onChange={(e) => setFormData(prev => ({ ...prev, visual_traits: e.target.value.split(',').map(s => s.trim()).filter(s => s) }))}
-                              className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all"
-                              placeholder="e.g. Red Eyes, White Tail, High Contrast..."
-                            />
-                            <p className="text-[9px] text-slate-400 italic">Separate by comma for multiple traits.</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Combo Potential (Compatibility)</label>
-                          <div className="space-y-2">
-                            <input 
-                              type="text"
-                              value={formData.combo_compatibility?.join(', ') || ''}
-                              onChange={(e) => setFormData(prev => ({ ...prev, combo_compatibility: e.target.value.split(',').map(s => s.trim()).filter(s => s) }))}
-                              className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all"
-                              placeholder="e.g. Enigma, White & Yellow, Eclipse..."
-                            />
-                            <p className="text-[9px] text-slate-400 italic">Separate by comma for multiple combos.</p>
-                          </div>
-                        </div>
+                        {/* 6. Genetic Signatures (Visual Traits) */}
+                        <SearchableMultiSelect
+                          label="Genetic Signatures (Visual Traits)"
+                          sublabel="Ciri khas fenotipe visual (contoh: Red Eyes, White Tail)"
+                          placeholder="Cari ciri khas visual..."
+                          selected={formData.visual_traits || []}
+                          onChange={(traits) => setFormData(prev => ({ 
+                            ...prev, 
+                            visual_traits: traits,
+                            genetic_signatures: traits 
+                          }))}
+                          options={GENETIC_SIGNATURE_OPTIONS}
+                          allowCustom={true}
+                          customAddText="+ Add New Signature"
+                          chipColor="emerald"
+                          icon={<Zap size={14} />}
+                        />
+
+                        {/* 7. Combo Potential */}
+                        <SearchableMultiSelect
+                          label="Combo Potential (Compatibility)"
+                          sublabel="Kompatibilitas kombinasi persilangan (contoh: Eclipse, Enigma)"
+                          placeholder="Cari potensi combo..."
+                          selected={formData.combo_compatibility || []}
+                          onChange={(combos) => setFormData(prev => ({ 
+                            ...prev, 
+                            combo_compatibility: combos,
+                            combo_potential: combos 
+                          }))}
+                          options={COMBO_POTENTIAL_OPTIONS}
+                          allowCustom={true}
+                          customAddText="+ Add New Combo"
+                          chipColor="purple"
+                          icon={<Sparkles size={14} />}
+                        />
                       </div>
                       
                       <div className="space-y-4">
@@ -673,7 +1176,7 @@ export default function AdminEncyclopedia() {
                           <button 
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, selection_priority: [...(prev.selection_priority || []), ''] }))}
-                            className="text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20 px-3 py-1 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"
+                            className="text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20 px-3 py-1 rounded-lg hover:bg-emerald-500 hover:text-white transition-all cursor-pointer"
                           >
                             + Add Guide Point
                           </button>
@@ -695,7 +1198,7 @@ export default function AdminEncyclopedia() {
                               <button 
                                 type="button"
                                 onClick={() => setFormData(prev => ({ ...prev, selection_priority: prev.selection_priority?.filter((_, i) => i !== idx) }))}
-                                className="p-3 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all"
+                                className="p-3 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all cursor-pointer"
                               >
                                 <X size={16} />
                               </button>
@@ -716,7 +1219,7 @@ export default function AdminEncyclopedia() {
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Breeder Professional Insight</label>
                         <textarea 
                           rows={4}
-                          value={formData.breeder_notes}
+                          value={formData.breeder_notes || ''}
                           onChange={(e) => setFormData(prev => ({ ...prev, breeder_notes: e.target.value }))}
                           className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl font-medium text-sm focus:border-emerald-500 transition-all no-scrollbar italic"
                           placeholder="Berikan tips spesifik untuk breeding, tantangan genetika, atau saran manajemen pakan..."
@@ -731,32 +1234,39 @@ export default function AdminEncyclopedia() {
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Citations & References</h4>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                         <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Credited Breeders / Sources</label>
-                             <div className="space-y-2">
-                                <input 
-                                  type="text"
-                                  value={formData.credited_breeders?.join(', ') || ''}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, credited_breeders: e.target.value.split(',').map(s => s.trim()).filter(s => s) }))}
-                                  className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all"
-                                  placeholder="Ron Tremper, Mark Bell..."
-                                />
-                                <p className="text-[9px] text-slate-400 italic">Separate by comma.</p>
-                             </div>
+                            <input 
+                              type="text"
+                              value={formData.credited_breeders?.join(', ') || ''}
+                              onChange={(e) => setFormData(prev => ({ ...prev, credited_breeders: e.target.value.split(',').map(s => s.trim()).filter(s => s) }))}
+                              className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all"
+                              placeholder="Ron Tremper, Mark Bell..."
+                            />
+                            <p className="text-[9px] text-slate-400 italic">Separate by comma.</p>
                          </div>
-                         <div className="space-y-4">
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Discovery Year (Tahun)</label>
+                            <input 
+                              type="text"
+                              value={formData.discovery_year || ''}
+                              onChange={(e) => setFormData(prev => ({ ...prev, discovery_year: e.target.value }))}
+                              className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all"
+                              placeholder="e.g. 1996, 2004..."
+                            />
+                            <p className="text-[9px] text-slate-400 italic">Tahun penemuan awal morph.</p>
+                         </div>
+                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Search Tags</label>
-                             <div className="space-y-2">
-                                <input 
-                                  type="text"
-                                  value={formData.tags?.join(', ') || ''}
-                                  onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value.split(',').map(s => s.trim()).filter(s => s) }))}
-                                  className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all font-mono"
-                                  placeholder="albino, raptor, gecko, research..."
-                                />
-                                <p className="text-[9px] text-slate-400 italic">Keywords for easier discovery.</p>
-                             </div>
+                            <input 
+                              type="text"
+                              value={formData.tags?.join(', ') || ''}
+                              onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value.split(',').map(s => s.trim()).filter(s => s) }))}
+                              className="w-full px-5 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm focus:border-emerald-500 transition-all font-mono"
+                              placeholder="albino, raptor, gecko, research..."
+                            />
+                            <p className="text-[9px] text-slate-400 italic">Keywords for easier discovery.</p>
                          </div>
                       </div>
 

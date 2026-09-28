@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
-  Filter, 
   Dna, 
   ArrowRight, 
   ShieldAlert, 
@@ -12,56 +11,46 @@ import {
   Activity, 
   Trophy,
   Loader2,
-  ExternalLink,
-  Info
+  ArrowLeftRight,
+  Search as SearchIcon,
+  FlaskConical,
+  Eye,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, registerListener, getCachedMorphs, setCachedMorphs } from '../../lib/firebase';
+import { useNavigate } from 'react-router-dom';
+import { db, getCachedMorphs, setCachedMorphs } from '../../lib/firebase';
 import MorphDetail from './MorphDetail';
+import MorphComparisonModal from './MorphComparisonModal';
 import { COMPLETE_MORPH_DATABASE } from './data';
-
-interface ReferenceLink {
-  title: string;
-  url: string;
-}
-
-interface MorphEntry {
-  id: string;
-  name: string;
-  slug: string;
-  category: 'Base' | 'Albino' | 'Snow' | 'Combo' | 'Line-bred' | 'Pattern' | 'Special';
-  rarity: 'Common' | 'Uncommon' | 'Rare' | 'Legendary' | 'Holy Grail';
-  inheritance_type: 'Recessive' | 'Incomplete Dominant' | 'Dominant' | 'Polygenetic' | 'Line-bred';
-  description: string;
-  genetics?: string;
-  visual_traits?: string[];
-  combo_compatibility?: string[];
-  warnings?: string;
-  breeder_notes?: string;
-  image_url?: string;
-  selection_priority?: string[];
-  tags?: string[];
-  reference_links?: ReferenceLink[];
-  credited_breeders?: string[];
-  created_at?: any;
-  updated_at?: any;
-}
+import { MorphEntry } from '../../types';
+import { 
+  normalizeCategories, 
+  normalizeInheritance, 
+  normalizeRarity, 
+  normalizeGeneticFormula, 
+  normalizeGeneticWarnings, 
+  normalizeGeneticSignatures, 
+  normalizeComboPotential 
+} from '../../lib/morphNormalizer';
 
 interface MorphListItemProps {
   morph: MorphEntry;
   onSelect: (morph: MorphEntry) => void;
+  onOpenCompare: (morph: MorphEntry) => void;
   index: number;
 }
 
-function MorphListItem({ morph, onSelect, index }: MorphListItemProps) {
+function MorphListItem({ morph, onSelect, onOpenCompare, index }: MorphListItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
+      transition={{ delay: Math.min(index * 0.02, 0.3) }}
       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all group"
     >
       <div 
@@ -71,23 +60,24 @@ function MorphListItem({ morph, onSelect, index }: MorphListItemProps) {
         <div className="flex items-center gap-4 sm:gap-6 min-w-0">
           <div className="relative w-14 h-14 shrink-0">
             <div className={`w-full h-full rounded-2xl flex items-center justify-center overflow-hidden border-2 ${
-              morph.rarity === 'Legendary' || morph.rarity === 'Holy Grail' ? 'border-amber-500/20 bg-amber-50' :
-              morph.rarity === 'Rare' ? 'border-purple-500/20 bg-purple-50' :
-              morph.rarity === 'Uncommon' ? 'border-blue-500/20 bg-blue-50' :
+              normalizeRarity(morph.rarity) === 'Legendary' ? 'border-amber-500/20 bg-amber-50' :
+              normalizeRarity(morph.rarity) === 'Epic' ? 'border-purple-500/20 bg-purple-50' :
+              normalizeRarity(morph.rarity) === 'Rare' ? 'border-indigo-500/20 bg-indigo-50' :
+              normalizeRarity(morph.rarity) === 'Uncommon' ? 'border-blue-500/20 bg-blue-50' :
               'border-slate-200 bg-slate-50'
             }`}>
               {morph.image_url ? (
                 <img 
                   src={morph.image_url} 
                   alt={morph.name} 
-                  className="w-full h-full object-cover" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <Dna size={24} className={isExpanded ? 'animate-pulse text-slate-400' : 'text-slate-400'} />
               )}
             </div>
-            {morph.rarity !== 'Common' && (
+            {normalizeRarity(morph.rarity) !== 'Common' && (
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center shadow-sm">
                  <Sparkles size={8} className="text-white" />
               </div>
@@ -95,27 +85,56 @@ function MorphListItem({ morph, onSelect, index }: MorphListItemProps) {
           </div>
           
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
+            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight truncate group-hover:text-emerald-500 transition-colors">
                 {morph.name}
               </h3>
+              {morph.image_url_baby && (
+                <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                  Baby Photo
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
-                {morph.inheritance_type}
+                {normalizeInheritance(morph.inheritance_type).join(', ')}
               </span>
-              <span className="w-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
+              <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
               <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.15em]">
-                {morph.category}
+                {normalizeCategories(morph.category).join(', ')}
               </span>
+              {(normalizeGeneticFormula(morph).length > 0 || morph.genetics) && (
+                <>
+                  <span className="w-1 h-1 bg-slate-300 dark:bg-slate-700 rounded-full" />
+                  <span className="text-[9px] font-mono font-bold text-slate-400 truncate max-w-[120px]">
+                    {normalizeGeneticFormula(morph).join(' + ') || morph.genetics}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          {morph.warnings && (
-            <ShieldAlert size={18} className="text-rose-500" />
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenCompare(morph);
+            }}
+            title="Bandingkan Morph Ini"
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-indigo-400 transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-2xs"
+          >
+            <ArrowLeftRight size={14} />
+            <span className="hidden sm:inline">Bandingkan</span>
+          </button>
+
+          {(normalizeGeneticWarnings(morph).length > 0 || morph.warnings) && (
+            <span title={normalizeGeneticWarnings(morph).map(w => `${w.title}: ${w.description}`).join(' | ') || morph.warnings}>
+              <ShieldAlert size={18} className="text-rose-500 shrink-0" />
+            </span>
           )}
+
           <motion.div
             animate={{ rotate: isExpanded ? 180 : 0 }}
             className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-slate-400 group-hover:text-emerald-500 transition-all"
@@ -147,25 +166,29 @@ function MorphListItem({ morph, onSelect, index }: MorphListItemProps) {
                   </div>
 
                   <div className="flex flex-wrap gap-4">
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex-1 min-w-[140px]">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex-1 min-w-[130px]">
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rarity</span>
-                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{morph.rarity}</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{normalizeRarity(morph.rarity)}</span>
                     </div>
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex-1 min-w-[140px]">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex-1 min-w-[130px]">
                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Genetics</span>
-                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{morph.genetics || 'N/A'}</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{normalizeGeneticFormula(morph).join(' + ') || morph.genetics || 'N/A'}</span>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex-1 min-w-[130px]">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Pewarisan</span>
+                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase">{normalizeInheritance(morph.inheritance_type).join(', ')}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                   <div>
+                  <div>
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                        <Activity size={14} className="text-emerald-500" />
                        Breeder Insight
                     </h4>
                     <p className="text-xs text-slate-500 italic leading-relaxed mb-4">
-                       {morph.breeder_notes || "No additional notes provided by researchers."}
+                       {morph.breeder_notes || "Belum ada catatan khusus dari peternak."}
                     </p>
                   </div>
 
@@ -185,16 +208,28 @@ function MorphListItem({ morph, onSelect, index }: MorphListItemProps) {
                     </div>
                   )}
 
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelect(morph);
-                    }}
-                    className="w-full py-4 bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                  >
-                    Buka Detail Lengkap
-                    <ArrowRight size={18} />
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/registry?search=${encodeURIComponent(morph.name)}`);
+                      }}
+                      className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <SearchIcon size={14} /> Cari di Koleksi
+                    </button>
+
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect(morph);
+                      }}
+                      className="flex-1 py-3 px-4 bg-emerald-500 text-white rounded-2xl text-[11px] font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      Buka Detail Lengkap
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -205,7 +240,11 @@ function MorphListItem({ morph, onSelect, index }: MorphListItemProps) {
   );
 }
 
-export default function Encyclopedia() {
+interface EncyclopediaProps {
+  onNavigateToLab?: (morph?: MorphEntry) => void;
+}
+
+export default function Encyclopedia({ onNavigateToLab }: EncyclopediaProps) {
   const [morphs, setMorphs] = useState<MorphEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,6 +252,13 @@ export default function Encyclopedia() {
   const [filterRarity, setFilterRarity] = useState<string>('all');
   const [selectedMorph, setSelectedMorph] = useState<MorphEntry | null>(null);
   const [activeSpecies, setActiveSpecies] = useState<'Leopard Gecko' | 'African Fat-Tailed Gecko'>('Leopard Gecko');
+
+  // Side-by-Side Compare state
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [compareMorphA, setCompareMorphA] = useState<MorphEntry | null>(null);
+  const [compareMorphB, setCompareMorphB] = useState<MorphEntry | null>(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     // 1. Try memory cache first
@@ -262,18 +308,39 @@ export default function Encyclopedia() {
     });
   }, []);
 
+  const handleOpenCompareWith = (morph: MorphEntry) => {
+    setCompareMorphA(morph);
+    // Find an appropriate comparison partner
+    const otherMorph = morphs.find(m => (m.id !== morph.id && m.slug !== morph.slug) && (m.category === morph.category || m.inheritance_type === morph.inheritance_type));
+    setCompareMorphB(otherMorph || null);
+    setIsCompareOpen(true);
+  };
+
   const filteredMorphs = useMemo(() => {
     return morphs.filter(m => {
-      const query = searchQuery.toLowerCase();
+      const queryStr = searchQuery.toLowerCase().trim();
+      const cats = normalizeCategories(m.category);
+      const inhs = normalizeInheritance(m.inheritance_type);
+      const formulas = normalizeGeneticFormula(m);
+      const sigs = normalizeGeneticSignatures(m);
+      const combos = normalizeComboPotential(m);
+      const warns = normalizeGeneticWarnings(m);
+      const rarity = normalizeRarity(m.rarity);
       
-      const matchesSearch = 
-        m.name.toLowerCase().includes(query) || 
-        m.description.toLowerCase().includes(query) ||
-        m.tags?.some(k => k.toLowerCase().includes(query)) ||
-        m.category.toLowerCase().includes(query);
+      const matchesSearch = !queryStr || (
+        m.name.toLowerCase().includes(queryStr) || 
+        m.description.toLowerCase().includes(queryStr) ||
+        m.tags?.some(k => k.toLowerCase().includes(queryStr)) ||
+        cats.some(c => c.toLowerCase().includes(queryStr)) ||
+        inhs.some(i => i.toLowerCase().includes(queryStr)) ||
+        formulas.some(f => f.toLowerCase().includes(queryStr)) ||
+        sigs.some(s => s.toLowerCase().includes(queryStr)) ||
+        combos.some(c => c.toLowerCase().includes(queryStr)) ||
+        warns.some(w => w.title.toLowerCase().includes(queryStr) || w.description.toLowerCase().includes(queryStr))
+      );
 
-      const matchesCategory = filterCategory === 'all' || m.category === filterCategory;
-      const matchesRarity = filterRarity === 'all' || m.rarity === filterRarity;
+      const matchesCategory = filterCategory === 'all' || cats.includes(filterCategory);
+      const matchesRarity = filterRarity === 'all' || rarity === filterRarity;
       
       const mSpecies = (m as any).species || 'Leopard Gecko';
       const matchesSpecies = mSpecies === activeSpecies;
@@ -283,30 +350,62 @@ export default function Encyclopedia() {
   }, [morphs, searchQuery, filterCategory, filterRarity, activeSpecies]);
 
   const categories = useMemo(() => {
-    const filteredForCats = morphs.filter(m => ((m as any).species || 'Leopard Gecko') === activeSpecies);
-    const cats = new Set(filteredForCats.map(m => m.category));
-    return Array.from(cats);
+    const activeMorphs = morphs.filter(m => ((m as any).species || 'Leopard Gecko') === activeSpecies);
+    const set = new Set<string>();
+    activeMorphs.forEach(m => {
+      normalizeCategories(m.category).forEach(c => set.add(c));
+    });
+    return Array.from(set).sort();
   }, [morphs, activeSpecies]);
-
-  if (loading) {
-     return (
-       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-         <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
-         <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Accessing Dynamic Research Database...</p>
-       </div>
-     );
-  }
 
   if (selectedMorph) {
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <MorphDetail morph={selectedMorph as any} onBack={() => setSelectedMorph(null)} />
+      <MorphDetail 
+        morph={selectedMorph} 
+        onBack={() => setSelectedMorph(null)}
+        onOpenCompare={(m) => handleOpenCompareWith(m)}
+        onNavigateToLab={(m) => onNavigateToLab?.(m)}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+        <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Menyinkronkan Ensiklopedia Riset...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* Top Banner with Compare Button */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-transparent p-6 rounded-[2.5rem] border border-slate-200 dark:border-slate-800">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2.5">
+            <Dna className="text-emerald-500" size={26} />
+            Arsip Ensiklopedia Morph & Genetika
+          </h2>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+            Panduan terlengkap identifikasi genetik, foto anakan vs dewasa, grading kualitas, dan etika breeding.
+          </p>
+        </div>
+
+        <button
+          onClick={() => {
+            setCompareMorphA(null);
+            setCompareMorphB(null);
+            setIsCompareOpen(true);
+          }}
+          className="px-6 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-600/25 active:scale-95 transition-all flex items-center justify-center gap-2.5 cursor-pointer shrink-0"
+        >
+          <ArrowLeftRight size={16} />
+          Bandingkan 2 Morph (Side-by-Side)
+        </button>
+      </div>
+
       {/* Species Tabs */}
       <div className="flex border-b border-slate-200 dark:border-slate-800 pb-1 gap-6">
         <button
@@ -314,7 +413,7 @@ export default function Encyclopedia() {
             setActiveSpecies('Leopard Gecko');
             setFilterCategory('all');
           }}
-          className={`pb-3 text-xs sm:text-sm font-black uppercase tracking-widest relative transition-colors ${
+          className={`pb-3 text-xs sm:text-sm font-black uppercase tracking-widest relative transition-colors cursor-pointer ${
             activeSpecies === 'Leopard Gecko'
               ? 'text-emerald-500 border-b-2 border-emerald-500'
               : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
@@ -327,13 +426,13 @@ export default function Encyclopedia() {
             setActiveSpecies('African Fat-Tailed Gecko');
             setFilterCategory('all');
           }}
-          className={`pb-3 text-xs sm:text-sm font-black uppercase tracking-widest relative transition-colors ${
+          className={`pb-3 text-xs sm:text-sm font-black uppercase tracking-widest relative transition-colors cursor-pointer ${
             activeSpecies === 'African Fat-Tailed Gecko'
               ? 'text-emerald-500 border-b-2 border-emerald-500'
               : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
           }`}
         >
-          African Fat-Tailed Gecko
+          African Fat-Tailed Gecko (AFT)
         </button>
       </div>
 
@@ -343,18 +442,18 @@ export default function Encyclopedia() {
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={20} />
           <input 
             type="text" 
-            placeholder="Cari research morph (contoh: 'Tremper', 'Albino')..."
-            className="w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-semibold text-slate-700 dark:text-slate-200"
+            placeholder="Cari research morph (contoh: 'Tremper', 'Mack Snow', 'Tangerine')..."
+            className="w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-semibold text-slate-700 dark:text-slate-200 text-sm"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
         <div className="flex flex-col gap-4 w-full">
-          <div className="flex flex-wrap gap-2 overflow-x-auto pb-4 no-scrollbar">
+          <div className="flex flex-wrap gap-2 overflow-x-auto pb-2 no-scrollbar">
             <button 
               onClick={() => setFilterCategory('all')}
-              className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
+              className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
                 filterCategory === 'all' ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' : 'bg-white dark:bg-slate-900 text-slate-400 border border-slate-200 dark:border-slate-800'
               }`}
             >
@@ -365,13 +464,13 @@ export default function Encyclopedia() {
               <button 
                 key={cat}
                 onClick={() => setFilterCategory(cat)}
-                className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
+                className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
                   filterCategory === cat ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20' : 'bg-white dark:bg-slate-900 text-slate-400 border border-slate-200 dark:border-slate-800'
                 }`}
               >
                 {cat === 'Base' && <Dna size={14} />}
                 {cat === 'Albino' && <Sparkles size={14} />}
-                {cat === 'Snow' && <ActivityIcon size={14} />}
+                {cat === 'Snow' && <Activity size={14} />}
                 {cat === 'Combo' && <Zap size={14} />}
                 {cat === 'Pattern' && <Layers size={14} />}
                 {cat === 'Line-bred' && <Activity size={14} />}
@@ -382,7 +481,7 @@ export default function Encyclopedia() {
 
           <div className="flex gap-3 w-full lg:w-auto">
             <select 
-              className="flex-1 lg:flex-none px-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none text-sm font-bold text-slate-600 dark:text-slate-300 focus:border-emerald-500/30 shadow-sm"
+              className="flex-1 lg:flex-none px-5 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none text-xs font-bold text-slate-600 dark:text-slate-300 focus:border-emerald-500/30 shadow-sm cursor-pointer"
               value={filterRarity}
               onChange={(e) => setFilterRarity(e.target.value)}
             >
@@ -390,68 +489,50 @@ export default function Encyclopedia() {
               <option value="Common">Common</option>
               <option value="Uncommon">Uncommon</option>
               <option value="Rare">Rare</option>
+              <option value="Epic">Epic</option>
               <option value="Legendary">Legendary</option>
-              <option value="Holy Grail">Holy Grail</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Expandable List */}
+      {/* Morph List */}
       <div className="space-y-3">
         {filteredMorphs.map((morph, index) => (
           <MorphListItem 
-            key={morph.id} 
+            key={morph.id || morph.slug} 
             morph={morph} 
             onSelect={setSelectedMorph}
+            onOpenCompare={handleOpenCompareWith}
             index={index}
           />
         ))}
       </div>
 
       {filteredMorphs.length === 0 && (
-        <div className="text-center py-24 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800">
+        <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-slate-800">
            <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl w-20 h-20 mx-auto mb-6 flex items-center justify-center text-slate-300">
              <Search size={32} />
            </div>
            <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase mb-2">Morph Tidak Ditemukan</h4>
-           <p className="text-slate-500 dark:text-slate-400 font-medium max-w-xs mx-auto">Coba cari dengan kata kunci lain atau tunggu update research terbaru.</p>
+           <p className="text-slate-500 dark:text-slate-400 font-medium max-w-xs mx-auto text-xs">Coba cari dengan kata kunci lain atau gunakan tab spesies lain.</p>
         </div>
       )}
 
-      {/* Pro Stats Footer */}
-      <div className="bg-slate-900 rounded-[3rem] p-10 text-white relative overflow-hidden">
-        <div className="absolute right-0 top-0 p-12 opacity-[0.05] -rotate-12 translate-x-1/4">
-          <Zap size={200} />
-        </div>
-        <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center sm:text-left">
-          <div className="space-y-1">
-             <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Total Live Morphs</div>
-             <div className="text-4xl font-black">{morphs.length}</div>
-          </div>
-          <div className="space-y-1">
-             <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Database Sync</div>
-             <div className="text-4xl font-black">LIVE</div>
-          </div>
-          <div className="space-y-1">
-             <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Curation Multiplier</div>
-             <div className="text-4xl font-black flex items-center justify-center sm:justify-start gap-2">
-               x10
-               <Sparkles className="text-amber-400" size={24} />
-             </div>
-          </div>
-          <div className="space-y-1">
-             <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Integrity Level</div>
-             <div className="text-4xl font-black">ENCRYPTED</div>
-          </div>
-        </div>
-      </div>
+      {/* Comparison Modal */}
+      <MorphComparisonModal 
+        isOpen={isCompareOpen}
+        onClose={() => setIsCompareOpen(false)}
+        allMorphs={morphs}
+        initialMorphA={compareMorphA}
+        initialMorphB={compareMorphB}
+        onSelectForLab={(mA, mB) => {
+          onNavigateToLab?.(mA);
+        }}
+        onSearchInRegistry={(name) => {
+          navigate(`/registry?search=${encodeURIComponent(name)}`);
+        }}
+      />
     </div>
   );
 }
-
-const ActivityIcon = ({ size }: { size: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-  </svg>
-);
