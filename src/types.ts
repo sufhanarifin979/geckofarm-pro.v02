@@ -69,8 +69,11 @@ export interface Clutch {
   hatchedCount: number;
   failedCount?: number;
   ownerId: string;
+  userId?: string;
   incubator?: string;
   species?: Species;
+  targetSex?: 'TSF' | 'TSM' | 'MIX';
+  createdAt?: string;
 }
 
 export interface UserProfile {

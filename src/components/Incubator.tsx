@@ -88,27 +88,41 @@ export default function Incubator({ profile, setProfile }: IncubatorProps) {
   };
 
   useEffect(() => {
-    // Get weather data based on geolocation
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const response = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m`
-          );
-          const data = await response.json();
-          if (data.current) {
-            setWeather({
-              temp: data.current.temperature_2m,
-              humidity: data.current.relative_humidity_2m
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching weather:", error);
+    // Fetch weather data with graceful fallback if geolocation is blocked or unavailable
+    const fetchWeatherForCoords = async (latitude: number, longitude: number) => {
+      try {
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m`
+        );
+        const data = await response.json();
+        if (data.current) {
+          setWeather({
+            temp: data.current.temperature_2m,
+            humidity: data.current.relative_humidity_2m
+          });
         }
-      }, (error) => {
-        console.error("Geolocation error:", error);
-      });
+      } catch (e) {
+        // Silently handle network/API errors
+      }
+    };
+
+    // Default coords (Jakarta) if geolocation is denied, times out, or restricted by iframe
+    const fallbackLat = -6.2088;
+    const fallbackLon = 106.8456;
+
+    if (typeof navigator !== 'undefined' && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          fetchWeatherForCoords(position.coords.latitude, position.coords.longitude);
+        },
+        () => {
+          // Fallback seamlessly without logging console.error
+          fetchWeatherForCoords(fallbackLat, fallbackLon);
+        },
+        { timeout: 5000, maximumAge: 600000 }
+      );
+    } else {
+      fetchWeatherForCoords(fallbackLat, fallbackLon);
     }
   }, []);
 
@@ -162,7 +176,7 @@ export default function Incubator({ profile, setProfile }: IncubatorProps) {
       name: '',
       morph: `${sire?.morph || ''} X ${dam?.morph || ''}`.trim().replace(/^ X | X $/g, '') || '',
       birthDate: new Date().toISOString().split('T')[0],
-      gender: 'unsex',
+      gender: clutch.targetSex === 'TSF' ? 'female' : clutch.targetSex === 'TSM' ? 'male' : 'unsex',
       status: 'available',
       albinoStrain: 'None',
       sireId: pairing?.sireId || '',
@@ -353,7 +367,14 @@ export default function Incubator({ profile, setProfile }: IncubatorProps) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {pairClutches.map((clutch, i) => {
+                  {[...pairClutches]
+                    .sort((a, b) => {
+                      const numA = Number(a.clutchNumber) || 0;
+                      const numB = Number(b.clutchNumber) || 0;
+                      if (numA !== numB) return numA - numB;
+                      return new Date(a.layDate).getTime() - new Date(b.layDate).getTime();
+                    })
+                    .map((clutch, i) => {
                     const daysIn = isNaN(new Date(clutch.layDate).getTime()) ? 0 : differenceInDays(new Date(), new Date(clutch.layDate));
                     const estHatchDate = isNaN(new Date(clutch.layDate).getTime()) ? new Date() : addDays(new Date(clutch.layDate), 45);
                     const progress = isNaN(daysIn) ? 0 : Math.min((daysIn / 45) * 100, 100);
@@ -406,6 +427,19 @@ export default function Incubator({ profile, setProfile }: IncubatorProps) {
                                     <Egg size={12} className={isOverdue ? "text-emerald-500" : "text-emerald-500"} />
                                     <span className={cn("text-xs font-black leading-none", isOverdue ? "text-emerald-600" : "text-emerald-600")}>{clutch.eggCount} Eggs</span>
                                   </div>
+                                  {clutch.targetSex && (
+                                    <>
+                                      <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                      <span className={cn(
+                                        "text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md border",
+                                        clutch.targetSex === 'TSF' ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                        clutch.targetSex === 'TSM' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                        "bg-purple-50 text-purple-700 border-purple-200"
+                                      )}>
+                                        {clutch.targetSex === 'TSF' ? '🌸 TSF' : clutch.targetSex === 'TSM' ? '⚡ TSM' : '🎲 Mix'}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useGeckos } from '../GeckoProvider';
 import { 
   Heart, 
@@ -23,13 +23,22 @@ import {
   Clock,
   Target,
   TrendingUp,
-  HeartOff
+  HeartOff,
+  RotateCcw,
+  SlidersHorizontal,
+  Flame,
+  Egg,
+  Printer,
+  Download
 } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { ClutchEggLabel } from './ClutchEggLabel';
 import { Gecko, Pairing, Clutch, UserProfile } from '../types';
-import { db } from '../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch, increment } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
+import { collection, query, where, onSnapshot, addDoc, setDoc, updateDoc, deleteDoc, doc, getDocs, writeBatch, increment } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, formatDate, getParentLineageDisplay } from '../lib/utils';
+import { differenceInDays, parseISO } from 'date-fns';
 import ConfirmationModal from './ConfirmationModal';
 import BreedingParentSelect from './BreedingParentSelect';
 
@@ -38,7 +47,7 @@ interface BreedingProps {
 }
 
 export default function Breeding({ profile }: BreedingProps) {
-  const { geckos, pairings, clutches, refreshData } = useGeckos();
+  const { geckos, pairings, clutches, refreshData, setClutches, setPairings } = useGeckos();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isClutchModalOpen, setIsClutchModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -56,11 +65,18 @@ export default function Breeding({ profile }: BreedingProps) {
     pairingDate: new Date().toISOString().split('T')[0]
   });
 
-  const [clutchData, setClutchData] = useState({
+  const [clutchData, setClutchData] = useState<{
+    clutchNumber: number;
+    layDate: string;
+    eggCount: number;
+    hatchedCount: number;
+    targetSex: 'TSF' | 'TSM' | 'MIX';
+  }>({
     clutchNumber: 1,
     layDate: new Date().toISOString().split('T')[0],
     eggCount: 2,
-    hatchedCount: 0
+    hatchedCount: 0,
+    targetSex: 'TSF'
   });
 
   const [expandedPairingId, setExpandedPairingId] = useState<string | null>(null);
@@ -85,13 +101,115 @@ export default function Breeding({ profile }: BreedingProps) {
   // New Tab & Filtering States
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
   const [searchQuery, setSearchQuery] = useState('');
-  const [yearFilter, setYearFilter] = useState<'All' | '2026' | '2025' | '2024'>('All');
+  const [yearFilter, setYearFilter] = useState<string>('All');
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'has-clutch' | 'no-clutch' | 'high-fertile' | 'high-hatch'>('all');
+  const [historySort, setHistorySort] = useState<'closed-desc' | 'closed-asc' | 'start-desc' | 'clutches-desc' | 'eggs-desc' | 'fertility-desc' | 'hatch-desc'>('closed-desc');
+
+  // Active Pairings Search & Smart Filters
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'need-check' | 'no-clutch' | 'has-clutch' | 'long-active'>('all');
+  const [activeSort, setActiveSort] = useState<'date-desc' | 'date-asc' | 'clutches-desc' | 'eggs-desc'>('date-desc');
 
   // Close Pairing Modal States
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
   const [pairingToClose, setPairingToClose] = useState<Pairing | null>(null);
   const [closeReason, setCloseReason] = useState('Breeding Finished');
   const [customReason, setCustomReason] = useState('');
+
+  // Clutch Egg Label printing states
+  const [selectedClutchForLabel, setSelectedClutchForLabel] = useState<{ clutch: Clutch; pairing: Pairing } | null>(null);
+  const [isPrintingLabel, setIsPrintingLabel] = useState(false);
+  const [isSavingClutch, setIsSavingClutch] = useState(false);
+  const [isClosingPairing, setIsClosingPairing] = useState(false);
+  const clutchLabelRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadClutchLabel = async () => {
+    if (!clutchLabelRef.current || isPrintingLabel || !selectedClutchForLabel) return;
+    setIsPrintingLabel(true);
+    try {
+      const dataUrl = await toPng(clutchLabelRef.current, {
+        cacheBust: true,
+        width: 350,
+        height: 300,
+        pixelRatio: 3,
+        backgroundColor: '#ffffff'
+      });
+      const link = document.createElement('a');
+      const { clutch, pairing } = selectedClutchForLabel;
+      const sireName = pairing.sireName || 'sire';
+      const damName = pairing.damName || 'dam';
+      link.download = `Label_Clutch_${clutch.clutchNumber}_${sireName}_x_${damName}.png`.replace(/\s+/g, '_');
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Download label error:", err);
+    } finally {
+      setIsPrintingLabel(false);
+    }
+  };
+
+  const handlePrintClutchLabel = async () => {
+    if (!clutchLabelRef.current || isPrintingLabel || !selectedClutchForLabel) return;
+    setIsPrintingLabel(true);
+    try {
+      const dataUrl = await toPng(clutchLabelRef.current, {
+        cacheBust: true,
+        width: 350,
+        height: 300,
+        pixelRatio: 3,
+        backgroundColor: '#ffffff'
+      });
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Print Label Clutch #${selectedClutchForLabel.clutch.clutchNumber}</title>
+              <style>
+                @page { size: 35mm 30mm; margin: 0; }
+                body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; background: #fff; width: 35mm; height: 30mm; }
+                img { width: 35mm; height: 30mm; object-fit: contain; display: block; }
+              </style>
+            </head>
+            <body>
+              <img src="${dataUrl}" />
+              <script>
+                window.onload = function() {
+                  setTimeout(function() {
+                    window.focus();
+                    window.print();
+                  }, 250);
+                };
+              </script>
+            </body>
+          </html>
+        `);
+        doc.close();
+        setTimeout(() => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+        }, 60000);
+      }
+    } catch (err) {
+      console.error("Print label error:", err);
+    } finally {
+      setIsPrintingLabel(false);
+    }
+  };
 
   // Utilizing central GeckoProvider (caching & shared listeners to avoid O(n) reads on navigation)
 
@@ -178,43 +296,121 @@ export default function Breeding({ profile }: BreedingProps) {
     }
   };
 
+  const openAddClutchModal = (pairing: Pairing) => {
+    setSelectedPairing(pairing);
+    const pairClutches = clutches.filter(c => c.pairingId === pairing.id);
+    const maxExisting = pairClutches.reduce((max, c) => Math.max(max, Number(c.clutchNumber) || 0), 0);
+    const nextNumber = Math.max(pairClutches.length, maxExisting) + 1;
+    setClutchData({
+      clutchNumber: nextNumber,
+      layDate: new Date().toISOString().split('T')[0],
+      eggCount: 2,
+      hatchedCount: 0,
+      targetSex: 'TSF'
+    });
+    setIsClutchModalOpen(true);
+  };
+
   const handleAddClutch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !selectedPairing) return;
+    if (!profile || !selectedPairing || isSavingClutch) return;
 
+    setIsSavingClutch(true);
     try {
-      const batch = writeBatch(db);
       const layDateObj = new Date(clutchData.layDate);
       const estimatedHatchDate = new Date(layDateObj);
-      estimatedHatchDate.setDate(layDateObj.getDate() + 60); // Default 60 days incubation
+      // Temperature Sex Determination (TSD):
+      // TSM (~31.5°C): ~42 days
+      // MIX (~29°C): ~50 days
+      // TSF (~27°C): ~58 days
+      const incubationDays = clutchData.targetSex === 'TSM' ? 42 : clutchData.targetSex === 'MIX' ? 50 : 58;
+      estimatedHatchDate.setDate(layDateObj.getDate() + incubationDays);
 
       const parentPairing = pairings.find(p => p.id === selectedPairing.id);
       const clutchSpecies = parentPairing?.species || 'Leopard Gecko';
 
+      // Always calculate the exact sequential clutch number based on current count
+      const existingPairClutches = clutches.filter(c => c.pairingId === selectedPairing.id);
+      const maxExisting = existingPairClutches.reduce((max, c) => Math.max(max, Number(c.clutchNumber) || 0), 0);
+      const sequentialClutchNumber = Math.max(existingPairClutches.length, maxExisting) + 1;
+
+      const currentUid = auth.currentUser?.uid || profile.uid;
       const newClutchRef = doc(collection(db, 'clutches'));
-      batch.set(newClutchRef, {
-        ...clutchData,
+      const newClutchId = newClutchRef.id;
+
+      const newClutchRecord: Clutch = {
+        id: newClutchId,
+        clutchNumber: sequentialClutchNumber,
+        layDate: clutchData.layDate,
+        eggCount: Number(clutchData.eggCount) || 1,
+        hatchedCount: Number(clutchData.hatchedCount) || 0,
+        targetSex: clutchData.targetSex || 'TSF',
         hatchDate: estimatedHatchDate.toISOString().split('T')[0],
         pairingId: selectedPairing.id,
-        ownerId: profile.uid,
-        species: clutchSpecies
+        ownerId: currentUid,
+        species: clutchSpecies,
+        createdAt: new Date().toISOString()
+      };
+
+      // 1. Instantly update local React state & cache for zero-delay instant feedback
+      setClutches(prev => {
+        const nextList = [newClutchRecord, ...prev.filter(c => c.id !== newClutchId)];
+        try {
+          localStorage.setItem(`cache_clutches_${profile.uid}`, JSON.stringify(nextList));
+        } catch (e) {
+          console.warn("Could not cache new clutch locally:", e);
+        }
+        return nextList;
       });
-      batch.update(doc(db, 'pairings', selectedPairing.id!), {
-        clutchCount: increment(1)
+
+      // Update pairing clutchCount locally
+      setPairings(prev => prev.map(p => p.id === selectedPairing.id ? { ...p, clutchCount: (p.clutchCount || 0) + 1 } : p));
+
+      // 2. Persist to Firestore
+      await setDoc(newClutchRef, {
+        clutchNumber: sequentialClutchNumber,
+        layDate: clutchData.layDate,
+        eggCount: Number(clutchData.eggCount) || 1,
+        hatchedCount: Number(clutchData.hatchedCount) || 0,
+        targetSex: clutchData.targetSex || 'TSF',
+        hatchDate: estimatedHatchDate.toISOString().split('T')[0],
+        pairingId: selectedPairing.id,
+        ownerId: currentUid,
+        userId: currentUid,
+        species: clutchSpecies,
+        createdAt: new Date().toISOString()
       });
-      batch.update(doc(db, 'users', profile.uid), { clutchCount: increment(1) });
-      
-      await batch.commit();
+
+      // 3. Increment pairing clutchCount safely
+      try {
+        await setDoc(doc(db, 'pairings', selectedPairing.id!), {
+          clutchCount: increment(1)
+        }, { merge: true });
+      } catch (errPairing) {
+        console.warn("Could not update pairing clutchCount in DB:", errPairing);
+      }
+
+      // 4. Increment user clutchCount safely
+      try {
+        await setDoc(doc(db, 'users', profile.uid), { clutchCount: increment(1) }, { merge: true });
+      } catch (errUser) {
+        console.warn("Could not update user clutchCount in DB:", errUser);
+      }
+
+      setIsClutchModalOpen(false);
+      setClutchData({ clutchNumber: 1, layDate: new Date().toISOString().split('T')[0], eggCount: 2, hatchedCount: 0, targetSex: 'TSF' });
+
+      // 5. Background sync
       try {
         await refreshData();
       } catch (e) {
         console.warn("Soft refresh failed after clutch save:", e);
       }
-
-      setIsClutchModalOpen(false);
-      setClutchData({ clutchNumber: 1, layDate: new Date().toISOString().split('T')[0], eggCount: 2, hatchedCount: 0 });
     } catch (error) {
       console.error("Error adding clutch:", error);
+      alert("Gagal mencatat data clutch: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsSavingClutch(false);
     }
   };
 
@@ -235,22 +431,142 @@ export default function Breeding({ profile }: BreedingProps) {
     }
   };
 
+  const handleDeleteClutch = async (clutchId: string, pairingId?: string) => {
+    if (!profile || !clutchId) return;
+    try {
+      // Find remaining clutches for this pairing, sorted by existing order
+      const remainingClutches = pairingId 
+        ? clutches.filter(c => c.pairingId === pairingId && c.id !== clutchId)
+        : [];
+      
+      remainingClutches.sort((a, b) => {
+        const numA = Number(a.clutchNumber) || 0;
+        const numB = Number(b.clutchNumber) || 0;
+        if (numA !== numB) return numA - numB;
+        return new Date(a.layDate).getTime() - new Date(b.layDate).getTime();
+      });
+
+      // Renumber sequentially 1..N (e.g. if #2 of #1 #2 #3 was deleted, #3 becomes #2)
+      const renumberedClutches: Clutch[] = remainingClutches.map((c, idx) => ({
+        ...c,
+        clutchNumber: idx + 1
+      }));
+
+      // 1. Immediately update local state & localStorage for instant user feedback
+      setClutches(prev => {
+        const updatedAll = prev
+          .filter(c => c.id !== clutchId)
+          .map(c => {
+            if (c.pairingId === pairingId) {
+              const ren = renumberedClutches.find(rc => rc.id === c.id);
+              if (ren) return ren;
+            }
+            return c;
+          });
+        
+        try {
+          localStorage.setItem(`cache_clutches_${profile.uid}`, JSON.stringify(updatedAll));
+        } catch (e) {
+          console.warn("Could not update local storage cache:", e);
+        }
+        return updatedAll;
+      });
+
+      if (pairingId) {
+        setPairings(prev => prev.map(p => p.id === pairingId ? { ...p, clutchCount: renumberedClutches.length } : p));
+      }
+
+      // 2. Perform database delete and renumbering updates
+      try {
+        const batch = writeBatch(db);
+        // Delete targeted clutch
+        batch.delete(doc(db, 'clutches', clutchId));
+
+        // Update remaining clutches with new sequential clutchNumber
+        renumberedClutches.forEach((c) => {
+          const original = remainingClutches.find(rc => rc.id === c.id);
+          if (original && original.clutchNumber !== c.clutchNumber && c.id) {
+            batch.update(doc(db, 'clutches', c.id), { clutchNumber: c.clutchNumber });
+          }
+        });
+
+        // Update pairing clutchCount
+        if (pairingId) {
+          batch.update(doc(db, 'pairings', pairingId), {
+            clutchCount: renumberedClutches.length
+          });
+        }
+
+        // Update user clutchCount
+        batch.update(doc(db, 'users', profile.uid), {
+          clutchCount: increment(-1)
+        });
+
+        await batch.commit();
+      } catch (batchErr) {
+        console.warn("Batch renumber failed, falling back to direct operations:", batchErr);
+        await deleteDoc(doc(db, 'clutches', clutchId));
+
+        // Update changed clutch numbers individually
+        for (const c of renumberedClutches) {
+          const original = remainingClutches.find(rc => rc.id === c.id);
+          if (original && original.clutchNumber !== c.clutchNumber && c.id) {
+            try {
+              await setDoc(doc(db, 'clutches', c.id), { clutchNumber: c.clutchNumber }, { merge: true });
+            } catch (errUp) {
+              console.warn(`Could not update clutch #${c.id} number:`, errUp);
+            }
+          }
+        }
+
+        if (pairingId) {
+          try {
+            await setDoc(doc(db, 'pairings', pairingId), { clutchCount: renumberedClutches.length }, { merge: true });
+          } catch (e) {
+            console.warn("Could not decrement pairing clutchCount:", e);
+          }
+        }
+      }
+
+      // 3. Trigger provider refresh in the background
+      try {
+        await refreshData();
+      } catch (refErr) {
+        console.warn("Provider refresh failed:", refErr);
+      }
+    } catch (error) {
+      console.error("Error deleting/renumbering clutch:", error);
+      alert("Gagal menghapus data clutch: " + (error instanceof Error ? error.message : String(error)));
+      throw error;
+    }
+  };
+
   const handleConfirmClosePairing = async () => {
-    if (!pairingToClose?.id) return;
+    if (!pairingToClose?.id || isClosingPairing) return;
+    setIsClosingPairing(true);
     try {
       const finalReason = closeReason === 'Other' ? (customReason || 'Other') : closeReason;
-      await updateDoc(doc(db, 'pairings', pairingToClose.id), {
+      await setDoc(doc(db, 'pairings', pairingToClose.id), {
         status: 'closed',
         closedAt: new Date().toISOString().split('T')[0],
         closeReason: finalReason
-      });
+      }, { merge: true });
+
       setIsCloseModalOpen(false);
       setPairingToClose(null);
       setCloseReason('Breeding Finished');
       setCustomReason('');
-      await refreshData();
+
+      try {
+        await refreshData();
+      } catch (errRef) {
+        console.warn("Refresh failed after closing pairing:", errRef);
+      }
     } catch (error) {
       console.error("Error closing pairing:", error);
+      alert("Gagal mengakhiri pairing: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsClosingPairing(false);
     }
   };
 
@@ -296,26 +612,261 @@ export default function Breeding({ profile }: BreedingProps) {
     return hatchDate > new Date();
   }).length;
 
-  // Filter and search calculations
-  const filteredClosedPairings = closedPairingsList.filter(pairing => {
-    // Year filter
+  // Helper to determine if an active pairing needs checking (10-12 days without clutch or after prior clutch)
+  const getPairingCheckStatus = (pairing: Pairing) => {
+    const today = new Date();
+    // Case A: Pairing belum punya clutch dan sudah 10-12 hari
+    if (!pairing.clutchCount || pairing.clutchCount === 0) {
+      if (!pairing.pairingDate) return null;
+      try {
+        const pairingDate = parseISO(pairing.pairingDate);
+        const days = differenceInDays(today, pairingDate);
+        if (days >= 10 && days <= 12) {
+          return {
+            inWindow: true,
+            days,
+            type: 'initial' as const,
+            title: `Hari ke-${days} (Cek Ovulasi / Palpasi)`,
+            desc: `Sudah ${days} hari sejak dipasangkan tanpa clutch. Waktu tepat palpasi & siapkan nesting box.`
+          };
+        }
+      } catch (e) {}
+      return null;
+    }
+
+    // Case B: Sudah punya clutch, cek apakah 10-12 hari sejak clutch terakhir belum ada clutch lanjutan
+    const pairClutches = clutches.filter(c => c.pairingId === pairing.id && c.layDate);
+    if (pairClutches.length > 0) {
+      try {
+        const sorted = [...pairClutches].sort((a, b) => new Date(b.layDate).getTime() - new Date(a.layDate).getTime());
+        const latestClutch = sorted[0];
+        const layDate = parseISO(latestClutch.layDate);
+        const days = differenceInDays(today, layDate);
+        if (days >= 10 && days <= 12) {
+          return {
+            inWindow: true,
+            days,
+            type: 'subsequent' as const,
+            clutchNumber: latestClutch.clutchNumber,
+            title: `Hari ke-${days} sejak Clutch #${latestClutch.clutchNumber}`,
+            desc: `Sudah ${days} hari sejak clutch terakhir. Cek ovulasi / perkembangan telur lanjutan.`
+          };
+        }
+      } catch (e) {}
+    }
+    return null;
+  };
+
+  // Metrics for active pairing filters
+  const needCheckCount = activePairingsList.filter(p => !!getPairingCheckStatus(p)).length;
+  const noClutchCount = activePairingsList.filter(p => !p.clutchCount || p.clutchCount === 0).length;
+  const hasClutchCount = activePairingsList.filter(p => (p.clutchCount || 0) > 0).length;
+  const longActiveCount = activePairingsList.filter(p => {
+    if (!p.pairingDate) return false;
+    try {
+      return differenceInDays(new Date(), parseISO(p.pairingDate)) >= 30;
+    } catch (e) {
+      return false;
+    }
+  }).length;
+
+  // Filter and smart search calculations for Active Pairings
+  const filteredActivePairings = useMemo(() => {
+    let list = [...activePairingsList];
+
+    // 1. Search Query
+    if (activeSearchQuery.trim() !== '') {
+      const q = activeSearchQuery.toLowerCase().trim();
+      list = list.filter(pairing => {
+        const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
+        const damInfo = getParentLineageDisplay('dam', pairing, geckos);
+        const sireMatch = sireInfo.name.toLowerCase().includes(q) || sireInfo.morph.toLowerCase().includes(q);
+        const damMatch = damInfo.name.toLowerCase().includes(q) || damInfo.morph.toLowerCase().includes(q);
+        const pairMatch = `${sireInfo.display} x ${damInfo.display}`.toLowerCase().includes(q);
+        const speciesMatch = (pairing.species || 'Leopard Gecko').toLowerCase().includes(q);
+        const dateMatch = (pairing.pairingDate || '').includes(q);
+        return sireMatch || damMatch || pairMatch || speciesMatch || dateMatch;
+      });
+    }
+
+    // 2. Filter chips
+    if (activeFilter === 'need-check') {
+      list = list.filter(p => !!getPairingCheckStatus(p));
+    } else if (activeFilter === 'no-clutch') {
+      list = list.filter(p => !p.clutchCount || p.clutchCount === 0);
+    } else if (activeFilter === 'has-clutch') {
+      list = list.filter(p => (p.clutchCount || 0) > 0);
+    } else if (activeFilter === 'long-active') {
+      const today = new Date();
+      list = list.filter(p => {
+        if (!p.pairingDate) return false;
+        try {
+          return differenceInDays(today, parseISO(p.pairingDate)) >= 30;
+        } catch (e) {
+          return false;
+        }
+      });
+    }
+
+    // 3. Sorting
+    list.sort((a, b) => {
+      if (activeSort === 'date-asc') {
+        return new Date(a.pairingDate || '').getTime() - new Date(b.pairingDate || '').getTime();
+      }
+      if (activeSort === 'clutches-desc') {
+        return (b.clutchCount || 0) - (a.clutchCount || 0);
+      }
+      if (activeSort === 'eggs-desc') {
+        const eggsA = clutches.filter(c => c.pairingId === a.id).reduce((s, c) => s + (c.eggCount || 0), 0);
+        const eggsB = clutches.filter(c => c.pairingId === b.id).reduce((s, c) => s + (c.eggCount || 0), 0);
+        return eggsB - eggsA;
+      }
+      // Default: date-desc (terbaru)
+      return new Date(b.pairingDate || '').getTime() - new Date(a.pairingDate || '').getTime();
+    });
+
+    return list;
+  }, [activePairingsList, activeSearchQuery, activeFilter, activeSort, geckos, clutches]);
+
+  // Dynamic available years in history
+  const availableHistoryYears = useMemo(() => {
+    const yearsSet = new Set<string>();
+    closedPairingsList.forEach(p => {
+      if (p.closedAt) {
+        const y = new Date(p.closedAt).getFullYear();
+        if (!isNaN(y)) yearsSet.add(y.toString());
+      }
+      if (p.pairingDate) {
+        const y = new Date(p.pairingDate).getFullYear();
+        if (!isNaN(y)) yearsSet.add(y.toString());
+      }
+    });
+    const sorted = Array.from(yearsSet).sort((a, b) => Number(b) - Number(a));
+    return ['All', ...sorted];
+  }, [closedPairingsList]);
+
+  // Metrics for history pairings
+  const historyWithClutchesCount = useMemo(() => {
+    return closedPairingsList.filter(p => (p.clutchCount || 0) > 0).length;
+  }, [closedPairingsList]);
+
+  const historyNoClutchCount = useMemo(() => {
+    return closedPairingsList.filter(p => !p.clutchCount || p.clutchCount === 0).length;
+  }, [closedPairingsList]);
+
+  const historyHighFertileCount = useMemo(() => {
+    return closedPairingsList.filter(p => {
+      const pairClutches = clutches.filter(c => c.pairingId === p.id);
+      const totalEggs = pairClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
+      const totalFailed = pairClutches.reduce((sum, c) => sum + (c.failedCount || 0), 0);
+      const fertileEggs = Math.max(0, totalEggs - totalFailed);
+      return totalEggs > 0 && Math.round((fertileEggs / totalEggs) * 100) >= 80;
+    }).length;
+  }, [closedPairingsList, clutches]);
+
+  const historyHighHatchCount = useMemo(() => {
+    return closedPairingsList.filter(p => {
+      const pairClutches = clutches.filter(c => c.pairingId === p.id);
+      const totalEggs = pairClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
+      const totalFailed = pairClutches.reduce((sum, c) => sum + (c.failedCount || 0), 0);
+      const fertileEggs = Math.max(0, totalEggs - totalFailed);
+      const totalHatched = pairClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
+      return fertileEggs > 0 && Math.round((totalHatched / fertileEggs) * 100) >= 80;
+    }).length;
+  }, [closedPairingsList, clutches]);
+
+  // Smart Filter and search calculations for History
+  const filteredClosedPairings = useMemo(() => {
+    let list = [...closedPairingsList];
+
+    // 1. Year filter
     if (yearFilter !== 'All') {
-      const startYear = pairing.pairingDate ? new Date(pairing.pairingDate).getFullYear().toString() : '';
-      const endYear = pairing.closedAt ? new Date(pairing.closedAt).getFullYear().toString() : '';
-      if (startYear !== yearFilter && endYear !== yearFilter) return false;
+      list = list.filter(pairing => {
+        const startYear = pairing.pairingDate ? new Date(pairing.pairingDate).getFullYear().toString() : '';
+        const endYear = pairing.closedAt ? new Date(pairing.closedAt).getFullYear().toString() : '';
+        return startYear === yearFilter || endYear === yearFilter;
+      });
     }
-    // Search filter
+
+    // 2. Smart Search filter
     if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
-      const damInfo = getParentLineageDisplay('dam', pairing, geckos);
-      const sireMatch = sireInfo.name.toLowerCase().includes(q) || sireInfo.morph.toLowerCase().includes(q);
-      const damMatch = damInfo.name.toLowerCase().includes(q) || damInfo.morph.toLowerCase().includes(q);
-      const pairMatch = `${sireInfo.display} x ${damInfo.display}`.toLowerCase().includes(q);
-      return sireMatch || damMatch || pairMatch;
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(pairing => {
+        const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
+        const damInfo = getParentLineageDisplay('dam', pairing, geckos);
+        const sireMatch = sireInfo.name.toLowerCase().includes(q) || sireInfo.morph.toLowerCase().includes(q);
+        const damMatch = damInfo.name.toLowerCase().includes(q) || damInfo.morph.toLowerCase().includes(q);
+        const pairMatch = `${sireInfo.display} x ${damInfo.display}`.toLowerCase().includes(q) ||
+                          `${sireInfo.display} × ${damInfo.display}`.toLowerCase().includes(q);
+        const speciesMatch = (pairing.species || 'Leopard Gecko').toLowerCase().includes(q);
+        const reasonMatch = (pairing.closeReason || '').toLowerCase().includes(q);
+        const startDateMatch = (pairing.pairingDate || '').includes(q);
+        const endDateMatch = (pairing.closedAt || '').includes(q);
+        return sireMatch || damMatch || pairMatch || speciesMatch || reasonMatch || startDateMatch || endDateMatch;
+      });
     }
-    return true;
-  });
+
+    // 3. Quick Filter Chips
+    if (historyFilter === 'has-clutch') {
+      list = list.filter(p => (p.clutchCount || 0) > 0);
+    } else if (historyFilter === 'no-clutch') {
+      list = list.filter(p => !p.clutchCount || p.clutchCount === 0);
+    } else if (historyFilter === 'high-fertile') {
+      list = list.filter(p => {
+        const pairClutches = clutches.filter(c => c.pairingId === p.id);
+        const totalEggs = pairClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
+        const totalFailed = pairClutches.reduce((sum, c) => sum + (c.failedCount || 0), 0);
+        const fertileEggs = Math.max(0, totalEggs - totalFailed);
+        return totalEggs > 0 && Math.round((fertileEggs / totalEggs) * 100) >= 80;
+      });
+    } else if (historyFilter === 'high-hatch') {
+      list = list.filter(p => {
+        const pairClutches = clutches.filter(c => c.pairingId === p.id);
+        const totalEggs = pairClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
+        const totalFailed = pairClutches.reduce((sum, c) => sum + (c.failedCount || 0), 0);
+        const fertileEggs = Math.max(0, totalEggs - totalFailed);
+        const totalHatched = pairClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
+        return fertileEggs > 0 && Math.round((totalHatched / fertileEggs) * 100) >= 80;
+      });
+    }
+
+    // 4. Sorting
+    list.sort((a, b) => {
+      const getPairingMetrics = (p: Pairing) => {
+        const pairClutches = clutches.filter(c => c.pairingId === p.id);
+        const totalEggs = pairClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
+        const totalFailed = pairClutches.reduce((sum, c) => sum + (c.failedCount || 0), 0);
+        const fertileEggs = Math.max(0, totalEggs - totalFailed);
+        const totalHatched = pairClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
+        const fertilityRate = totalEggs > 0 ? (fertileEggs / totalEggs) * 100 : 0;
+        const hatchRate = fertileEggs > 0 ? (totalHatched / fertileEggs) * 100 : 0;
+        return { totalEggs, totalHatched, fertilityRate, hatchRate };
+      };
+
+      if (historySort === 'closed-asc') {
+        return new Date(a.closedAt || a.pairingDate || '').getTime() - new Date(b.closedAt || b.pairingDate || '').getTime();
+      }
+      if (historySort === 'start-desc') {
+        return new Date(b.pairingDate || '').getTime() - new Date(a.pairingDate || '').getTime();
+      }
+      if (historySort === 'clutches-desc') {
+        return (b.clutchCount || 0) - (a.clutchCount || 0);
+      }
+      if (historySort === 'eggs-desc') {
+        return getPairingMetrics(b).totalEggs - getPairingMetrics(a).totalEggs;
+      }
+      if (historySort === 'fertility-desc') {
+        return getPairingMetrics(b).fertilityRate - getPairingMetrics(a).fertilityRate;
+      }
+      if (historySort === 'hatch-desc') {
+        return getPairingMetrics(b).hatchRate - getPairingMetrics(a).hatchRate;
+      }
+      // Default: closed-desc (terbaru selesai)
+      return new Date(b.closedAt || b.pairingDate || '').getTime() - new Date(a.closedAt || a.pairingDate || '').getTime();
+    });
+
+    return list;
+  }, [closedPairingsList, yearFilter, searchQuery, historyFilter, historySort, geckos, clutches]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 overflow-hidden pb-20">
@@ -434,20 +985,172 @@ export default function Breeding({ profile }: BreedingProps) {
           </div>
 
           {activeTab === 'active' ? (
-            /* ACTIVE PAIRINGS LIST */
-            activePairingsList.length > 0 ? (
-              <div className="space-y-4">
-                {activePairingsList.map((pairing) => {
-                  const isExpanded = expandedPairingId === pairing.id;
-                  const pairingClutches = clutches.filter(c => c.pairingId === pairing.id);
-                  const totalEggs = pairingClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
-                  const totalHatched = pairingClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
-                  const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
-                  const damInfo = getParentLineageDisplay('dam', pairing, geckos);
+            /* ACTIVE PAIRINGS LIST WITH SMART SEARCH & FILTERS */
+            <div className="space-y-4">
+              {/* Search & Smart Filter Bar */}
+              <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-150 shadow-sm space-y-3.5">
+                {/* Search input + Sort row */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Cari pejantan, indukan, morph, spesies, tanggal..."
+                      className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-800 transition-all"
+                      value={activeSearchQuery}
+                      onChange={(e) => setActiveSearchQuery(e.target.value)}
+                    />
+                    {activeSearchQuery && (
+                      <button 
+                        onClick={() => setActiveSearchQuery('')}
+                        title="Hapus pencarian"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 active:scale-90"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
 
-                  return (
-                    <div key={pairing.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
-                      {/* Header: Side-by-Side Visualization */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl">
+                      <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
+                      <select
+                        value={activeSort}
+                        onChange={(e) => setActiveSort(e.target.value as any)}
+                        className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                      >
+                        <option value="date-desc">Terbaru Dipairing</option>
+                        <option value="date-asc">Terlama Dipairing</option>
+                        <option value="clutches-desc">Clutch Terbanyak</option>
+                        <option value="eggs-desc">Telur Terbanyak</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Chips Row */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+                  <button
+                    onClick={() => setActiveFilter('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      activeFilter === 'all'
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Semua ({activePairingsList.length})
+                  </button>
+
+                  <button
+                    onClick={() => setActiveFilter('need-check')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5",
+                      activeFilter === 'need-check'
+                        ? "bg-amber-500 text-white shadow-sm"
+                        : needCheckCount > 0
+                          ? "bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 font-extrabold"
+                          : "bg-slate-50 text-slate-400 border border-slate-200"
+                    )}
+                  >
+                    <span className="relative flex h-2 w-2">
+                      {needCheckCount > 0 && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      )}
+                      <span className={cn("relative inline-flex rounded-full h-2 w-2", needCheckCount > 0 ? "bg-amber-500" : "bg-slate-300")}></span>
+                    </span>
+                    <span>Cek 10-12 Hari ({needCheckCount})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveFilter('no-clutch')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      activeFilter === 'no-clutch'
+                        ? "bg-rose-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Belum Bertelur ({noClutchCount})
+                  </button>
+
+                  <button
+                    onClick={() => setActiveFilter('has-clutch')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      activeFilter === 'has-clutch'
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Sudah Bertelur ({hasClutchCount})
+                  </button>
+
+                  <button
+                    onClick={() => setActiveFilter('long-active')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      activeFilter === 'long-active'
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Lama Aktif (&gt;30 Hari) ({longActiveCount})
+                  </button>
+                </div>
+
+                {/* Status Bar */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-medium">
+                  <span>
+                    Menampilkan <strong className="text-slate-800">{filteredActivePairings.length}</strong> dari {activePairingsList.length} pairing aktif
+                  </span>
+                  {(activeSearchQuery || activeFilter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setActiveSearchQuery('');
+                        setActiveFilter('all');
+                      }}
+                      className="text-red-600 hover:underline font-bold flex items-center gap-1 active:scale-95 text-xs"
+                    >
+                      <RotateCcw size={11} /> Reset Filter
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {filteredActivePairings.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredActivePairings.map((pairing) => {
+                    const isExpanded = expandedPairingId === pairing.id;
+                    const pairingClutches = clutches
+                      .filter(c => c.pairingId === pairing.id)
+                      .sort((a, b) => {
+                        const numA = Number(a.clutchNumber) || 0;
+                        const numB = Number(b.clutchNumber) || 0;
+                        if (numA !== numB) return numA - numB;
+                        return new Date(a.layDate).getTime() - new Date(b.layDate).getTime();
+                      });
+                    const totalEggs = pairingClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
+                    const totalHatched = pairingClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
+                    const sireInfo = getParentLineageDisplay('sire', pairing, geckos);
+                    const damInfo = getParentLineageDisplay('dam', pairing, geckos);
+                    const checkStatus = getPairingCheckStatus(pairing);
+
+                    return (
+                      <div key={pairing.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                        {/* 10-12 Days Check Banner */}
+                        {checkStatus && (
+                          <div className="bg-amber-500 text-white px-5 py-2.5 flex items-center justify-between text-xs font-bold shadow-inner">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0 animate-bounce text-amber-100" />
+                              <span>⚠️ {checkStatus.title}</span>
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+                              Perlu Palpasi / Cek Ovulasi
+                            </span>
+                          </div>
+                        )}
+                        {/* Header: Side-by-Side Visualization */}
                       <div 
                         onClick={() => setExpandedPairingId(isExpanded ? null : pairing.id!)}
                         className="p-5 cursor-pointer relative"
@@ -593,103 +1296,136 @@ export default function Breeding({ profile }: BreedingProps) {
                                   </div>
                                 </div>
 
-                                {/* Detailed Clutch Timeline */}
-                                <div className="space-y-4">
+                                {/* Clutch Records Table */}
+                                <div className="space-y-3">
                                   <div className="flex items-center justify-between px-1">
                                     <h5 className="text-[10px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
                                       <Box size={14} className="text-amber-500" />
-                                      Clutch Timeline
+                                      Tabel Clutch ({pairingClutches.length})
                                     </h5>
                                     <button 
-                                      onClick={(e) => { e.stopPropagation(); setSelectedPairing(pairing); setIsClutchModalOpen(true); }}
-                                      className="px-4 py-2 bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 hover:bg-slate-800 transition-all rounded-xl shadow-lg shadow-slate-200 active:scale-95"
+                                      onClick={(e) => { e.stopPropagation(); openAddClutchModal(pairing); }}
+                                      className="px-3.5 py-1.5 bg-slate-900 text-[10px] font-black text-white uppercase tracking-widest flex items-center gap-1.5 hover:bg-slate-800 transition-all rounded-xl shadow-md active:scale-95 cursor-pointer"
                                     >
                                       <Plus size={12} /> New Clutch
                                     </button>
                                   </div>
 
-                                  <div className="relative pl-6 space-y-4">
-                                    {/* Timeline Vertical Line */}
-                                    <div className="absolute left-[11px] top-4 bottom-4 w-0.5 bg-slate-100" />
+                                  {pairingClutches.length > 0 ? (
+                                    <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-2xs">
+                                      <table className="w-full text-left border-collapse">
+                                        <thead>
+                                          <tr className="border-b border-slate-100 bg-slate-50/70 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                                            <th className="py-2.5 px-3.5 text-center w-12">#</th>
+                                            <th className="py-2.5 px-3">Tgl Bertelur</th>
+                                            <th className="py-2.5 px-3">Jumlah Telur</th>
+                                            <th className="py-2.5 px-3">Target TSD</th>
+                                            <th className="py-2.5 px-3">Est. Menetas</th>
+                                            <th className="py-2.5 px-3 text-center">Menetas</th>
+                                            <th className="py-2.5 px-3 text-right">Aksi</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50 text-xs">
+                                          {pairingClutches.map((clutch) => {
+                                              const successRate = clutch.hatchedCount / clutch.eggCount;
+                                              const isFullHatch = successRate === 1;
+                                              const isPartialHatch = successRate > 0 && successRate < 1;
+                                              const isFailure = successRate === 0 && new Date(clutch.hatchDate || '') < new Date();
 
-                                    {pairingClutches.length > 0 ? (
-                                      pairingClutches
-                                        .sort((a, b) => new Date(b.layDate).getTime() - new Date(a.layDate).getTime())
-                                        .map((clutch, idx, arr) => {
-                                          const successRate = clutch.hatchedCount / clutch.eggCount;
-                                          const isFullHatch = successRate === 1;
-                                          const isPartialHatch = successRate > 0 && successRate < 1;
-                                          const isFailure = successRate === 0 && new Date(clutch.hatchDate || '') < new Date();
+                                              return (
+                                                <tr key={clutch.id} className="hover:bg-slate-50/80 transition-colors">
+                                                  <td className="py-3 px-3.5 text-center">
+                                                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-black text-xs">
+                                                      #{clutch.clutchNumber}
+                                                    </span>
+                                                  </td>
 
-                                          return (
-                                            <div key={clutch.id} className="relative">
-                                              {/* Timeline Node */}
-                                              <div className={cn(
-                                                "absolute -left-[19px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-[3px] border-white shadow-sm z-10 transition-colors",
-                                                isFullHatch ? "bg-emerald-500 ring-2 ring-emerald-100" : 
-                                                isPartialHatch ? "bg-amber-500 ring-2 ring-amber-100" :
-                                                isFailure ? "bg-rose-500 ring-2 ring-rose-100" : "bg-slate-200 ring-2 ring-slate-50"
-                                              )} />
+                                                  <td className="py-3 px-3">
+                                                    <div className="font-black text-slate-800 text-xs">{formatDate(clutch.layDate)}</div>
+                                                    <div className="text-[10px] text-slate-400 font-medium">{clutch.incubator || 'Incubator'}</div>
+                                                  </td>
 
-                                              <div className="group/item flex items-center justify-between p-4 bg-white border border-slate-100 hover:border-slate-200 rounded-2xl transition-all shadow-sm">
-                                                <div className="flex items-center gap-4">
-                                                  <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex flex-col items-center justify-center">
-                                                    <span className="text-[7px] font-black text-slate-400">#</span>
-                                                    <span className="text-[10px] font-black text-slate-600">{arr.length - idx}</span>
-                                                  </div>
-                                                  <div>
-                                                    <div className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{formatDate(clutch.layDate)}</div>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                      <span className="text-[8px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-1.5 py-0.5 rounded-md">{clutch.eggCount} Eggs</span>
-                                                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[80px]">{clutch.incubator || 'Incubator A'}</span>
+                                                  <td className="py-3 px-3">
+                                                    <span className="font-black text-slate-700 bg-amber-50 text-amber-700 border border-amber-200/50 px-2 py-0.5 rounded-md text-[10px] uppercase">
+                                                      {clutch.eggCount} Butir
+                                                    </span>
+                                                  </td>
+
+                                                  <td className="py-3 px-3">
+                                                    {clutch.targetSex ? (
+                                                      <span className={cn(
+                                                        "font-black text-[10px] uppercase px-2 py-0.5 rounded-md border inline-flex items-center gap-1",
+                                                        clutch.targetSex === 'TSF' ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                                        clutch.targetSex === 'TSM' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                                        "bg-purple-50 text-purple-700 border-purple-200"
+                                                      )}>
+                                                        {clutch.targetSex === 'TSF' ? '🌸 TSF' : clutch.targetSex === 'TSM' ? '⚡ TSM' : '🎲 Mix'}
+                                                      </span>
+                                                    ) : (
+                                                      <span className="text-slate-400 text-[10px] font-bold">-</span>
+                                                    )}
+                                                  </td>
+
+                                                  <td className="py-3 px-3">
+                                                    <div className="font-bold text-slate-600 text-xs">
+                                                      {clutch.hatchDate ? formatDate(clutch.hatchDate) : '-'}
                                                     </div>
-                                                  </div>
-                                                </div>
-                                                <div className="flex items-center gap-4">
-                                                  <div className="text-right">
-                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Hatched</div>
-                                                    <div className={cn(
-                                                      "text-sm font-black transition-colors",
-                                                      isFullHatch ? "text-emerald-500" : 
-                                                      isPartialHatch ? "text-amber-500" :
-                                                      isFailure ? "text-rose-500" : "text-slate-400"
+                                                  </td>
+
+                                                  <td className="py-3 px-3 text-center">
+                                                    <span className={cn(
+                                                      "font-black text-xs px-2 py-0.5 rounded-md",
+                                                      isFullHatch ? "bg-emerald-50 text-emerald-600 border border-emerald-200" :
+                                                      isPartialHatch ? "bg-amber-50 text-amber-600 border border-amber-200" :
+                                                      isFailure ? "bg-rose-50 text-rose-600 border border-rose-200" :
+                                                      "bg-slate-50 text-slate-500 border border-slate-200"
                                                     )}>
-                                                      {clutch.hatchedCount} <span className="text-[9px] text-slate-300">/</span> {clutch.eggCount}
+                                                      {clutch.hatchedCount} / {clutch.eggCount}
+                                                    </span>
+                                                  </td>
+
+                                                  <td className="py-3 px-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                      <button 
+                                                        onClick={(e) => { 
+                                                          e.stopPropagation(); 
+                                                          setSelectedClutchForLabel({ clutch, pairing });
+                                                        }}
+                                                        className="h-8 px-2.5 bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 transition-all rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                                                        title="Cetak Label Clutch"
+                                                      >
+                                                        <Printer size={13} />
+                                                        <span className="hidden sm:inline">Label</span>
+                                                      </button>
+                                                      <button 
+                                                        onClick={(e) => { 
+                                                          e.stopPropagation(); 
+                                                          setConfirmConfig({
+                                                            isOpen: true,
+                                                            title: 'Hapus Clutch',
+                                                            message: 'Apakah Anda yakin ingin menghapus catatan data clutch ini?',
+                                                            onConfirm: () => handleDeleteClutch(clutch.id!, pairing.id)
+                                                          });
+                                                        }}
+                                                        className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all border border-transparent hover:border-red-100 cursor-pointer"
+                                                        title="Hapus Clutch"
+                                                      >
+                                                        <Trash2 size={14} />
+                                                      </button>
                                                     </div>
-                                                  </div>
-                                                  <button 
-                                                    onClick={(e) => { 
-                                                      e.stopPropagation(); 
-                                                      setConfirmConfig({
-                                                        isOpen: true,
-                                                        title: 'Delete Clutch',
-                                                        message: 'Are you sure you want to delete this clutch record?',
-                                                        onConfirm: async () => {
-                                                          try {
-                                                            await deleteDoc(doc(db, 'clutches', clutch.id!));
-                                                            await refreshData();
-                                                          } catch (err) {
-                                                            console.error("Error deleting clutch:", err);
-                                                          }
-                                                        }
-                                                      });
-                                                    }}
-                                                    className="w-11 h-11 flex items-center justify-center text-slate-300 hover:text-red-500 sm:opacity-0 group-hover/item:opacity-100 transition-all rounded-xl border border-transparent hover:border-red-100 hover:bg-red-50"
-                                                  >
-                                                    <Trash2 size={16} />
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          );
-                                        })
-                                    ) : (
-                                      <div className="py-10 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-                                        <Database size={24} className="text-slate-100 mb-2" />
-                                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No clutches logged yet</p>
-                                      </div>
-                                    )}
-                                  </div>
+                                                  </td>
+                                                </tr>
+                                              );
+                                            })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  ) : (
+                                    <div className="py-10 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-center px-6">
+                                      <Database size={24} className="text-slate-200 mb-2" />
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Belum ada data clutch yang dicatat</p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -699,45 +1435,179 @@ export default function Breeding({ profile }: BreedingProps) {
                     </div>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-16 flex flex-col items-center justify-center text-center px-6 shadow-sm">
-                 <Heart className="w-12 h-12 text-slate-100 mb-4" />
-                 <h3 className="font-bold text-slate-800">No Active Pairings</h3>
-                 <p className="text-slate-400 text-xs font-medium max-w-[200px] mt-1">Mulai breeding session Anda dengan menekan tombol Pairing Baru.</p>
-              </div>
-            )
+                </div>
+              ) : activePairingsList.length === 0 ? (
+                <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-16 flex flex-col items-center justify-center text-center px-6 shadow-sm">
+                  <Heart className="w-12 h-12 text-slate-200 mb-4" />
+                  <h3 className="font-bold text-slate-800">Belum Ada Pairing Aktif</h3>
+                  <p className="text-slate-400 text-xs font-medium max-w-[220px] mt-1">Mulai breeding session Anda dengan menekan tombol Pairing Baru di atas.</p>
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-14 flex flex-col items-center justify-center text-center px-6 shadow-sm">
+                  <Search className="w-10 h-10 text-slate-300 mb-3" />
+                  <h3 className="font-bold text-slate-800">Tidak Ada Pairing Cocok</h3>
+                  <p className="text-slate-400 text-xs font-medium max-w-[240px] mt-1">
+                    Tidak ditemukan pairing aktif yang cocok dengan kata kunci "{activeSearchQuery}" atau filter aktif.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setActiveSearchQuery('');
+                      setActiveFilter('all');
+                    }}
+                    className="mt-4 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+                  >
+                    Reset Pencarian & Filter
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
-            /* PAIRING HISTORY LIST */
-            <div className="space-y-6">
-              {/* Search & Filter bar */}
-              <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+            /* PAIRING HISTORY LIST WITH SMART SEARCH & FILTERS */
+            <div className="space-y-4">
+              {/* Smart Search & Filter bar for History */}
+              <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-150 shadow-sm space-y-3.5">
+                {/* Search input + Sort row */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                     <input
                       type="text"
-                      placeholder="Cari Pair (Jantan / Betina)..."
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-800 transition-all uppercase"
+                      placeholder="Cari history pejantan, indukan, morph, alasan tutup, tanggal..."
+                      className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-slate-800 transition-all"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
+                    {searchQuery && (
+                      <button 
+                        onClick={() => setSearchQuery('')}
+                        title="Hapus pencarian"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 active:scale-90"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
-                  <div className="flex gap-1.5 overflow-x-auto">
-                    {(['All', '2026', '2025', '2024'] as const).map((year) => (
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl">
+                      <ArrowUpDown size={14} className="text-slate-400 shrink-0" />
+                      <select
+                        value={historySort}
+                        onChange={(e) => setHistorySort(e.target.value as any)}
+                        className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                      >
+                        <option value="closed-desc">Selesai Terbaru</option>
+                        <option value="closed-asc">Selesai Terlama</option>
+                        <option value="start-desc">Mulai Terbaru</option>
+                        <option value="clutches-desc">Clutch Terbanyak</option>
+                        <option value="eggs-desc">Telur Terbanyak</option>
+                        <option value="fertility-desc">Fertilitas Tertinggi</option>
+                        <option value="hatch-desc">Hatch Rate Tertinggi</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Chips Row */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+                  <button
+                    onClick={() => setHistoryFilter('all')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      historyFilter === 'all'
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Semua ({closedPairingsList.length})
+                  </button>
+
+                  <button
+                    onClick={() => setHistoryFilter('has-clutch')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      historyFilter === 'has-clutch'
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Pernah Bertelur ({historyWithClutchesCount})
+                  </button>
+
+                  <button
+                    onClick={() => setHistoryFilter('no-clutch')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      historyFilter === 'no-clutch'
+                        ? "bg-rose-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Tanpa Telur ({historyNoClutchCount})
+                  </button>
+
+                  <button
+                    onClick={() => setHistoryFilter('high-fertile')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      historyFilter === 'high-fertile'
+                        ? "bg-amber-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Fertilitas Tinggi ≥80% ({historyHighFertileCount})
+                  </button>
+
+                  <button
+                    onClick={() => setHistoryFilter('high-hatch')}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl font-black uppercase text-[10px] tracking-wider transition-all whitespace-nowrap",
+                      historyFilter === 'high-hatch'
+                        ? "bg-teal-600 text-white shadow-sm"
+                        : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                    )}
+                  >
+                    Hatch Rate ≥80% ({historyHighHatchCount})
+                  </button>
+                </div>
+
+                {/* Year Filter & Result Summary Row */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Tahun:</span>
+                    {availableHistoryYears.map((year) => (
                       <button
                         key={year}
                         onClick={() => setYearFilter(year)}
                         className={cn(
-                          "px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0",
+                          "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap",
                           yearFilter === year
-                            ? "bg-slate-900 border-slate-900 text-white"
-                            : "bg-white border-slate-100 text-slate-500 hover:border-slate-200 shadow-sm"
+                            ? "bg-slate-800 text-white shadow-sm"
+                            : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
                         )}
                       >
                         {year}
                       </button>
                     ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-slate-400 font-bold text-[10px]">
+                      Menampilkan <strong className="text-slate-700">{filteredClosedPairings.length}</strong> dari {closedPairingsList.length} history
+                    </span>
+                    {(searchQuery !== '' || historyFilter !== 'all' || yearFilter !== 'All') && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setHistoryFilter('all');
+                          setYearFilter('All');
+                        }}
+                        className="flex items-center gap-1 text-[10px] font-bold text-rose-600 hover:text-rose-700 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100 transition-colors"
+                      >
+                        <RotateCcw size={10} />
+                        <span>Reset</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -746,7 +1616,14 @@ export default function Breeding({ profile }: BreedingProps) {
                 <div className="space-y-4">
                   {filteredClosedPairings.map((pairing) => {
                     const isExpanded = expandedPairingId === pairing.id;
-                    const pairingClutches = clutches.filter(c => c.pairingId === pairing.id);
+                    const pairingClutches = clutches
+                      .filter(c => c.pairingId === pairing.id)
+                      .sort((a, b) => {
+                        const numA = Number(a.clutchNumber) || 0;
+                        const numB = Number(b.clutchNumber) || 0;
+                        if (numA !== numB) return numA - numB;
+                        return new Date(a.layDate).getTime() - new Date(b.layDate).getTime();
+                      });
                     const totalEggs = pairingClutches.reduce((sum, c) => sum + (c.eggCount || 0), 0);
                     const totalHatched = pairingClutches.reduce((sum, c) => sum + (c.hatchedCount || 0), 0);
                     const totalFailed = pairingClutches.reduce((sum, c) => sum + (c.failedCount || 0), 0);
@@ -960,67 +1837,103 @@ export default function Breeding({ profile }: BreedingProps) {
                                     </div>
                                   </div>
 
-                                  {/* Clutch timeline in History detail */}
-                                  <div className="space-y-4">
+                                  {/* Clutch Records History Table */}
+                                  <div className="space-y-3">
                                     <h5 className="text-[10px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-2 px-1">
                                       <Box size={14} className="text-slate-500" />
-                                      Clutch Timeline History
+                                      Tabel Riwayat Clutch ({pairingClutches.length})
                                     </h5>
-                                    <div className="relative pl-6 space-y-4">
-                                      <div className="absolute left-[11px] top-4 bottom-4 w-0.5 bg-slate-200" />
-                                      {pairingClutches.length > 0 ? (
-                                        pairingClutches
-                                          .sort((a, b) => new Date(b.layDate).getTime() - new Date(a.layDate).getTime())
-                                          .map((clutch, idx, arr) => {
-                                            const successRate = clutch.hatchedCount / clutch.eggCount;
-                                            const isFullHatch = successRate === 1;
-                                            const isPartialHatch = successRate > 0 && successRate < 1;
-                                            const isFailure = successRate === 0 && new Date(clutch.hatchDate || '') < new Date();
+                                    {pairingClutches.length > 0 ? (
+                                      <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white shadow-2xs">
+                                        <table className="w-full text-left border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-slate-100 bg-slate-50/70 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+                                              <th className="py-2.5 px-3.5 text-center w-12">#</th>
+                                              <th className="py-2.5 px-3">Tgl Bertelur</th>
+                                              <th className="py-2.5 px-3">Jumlah Telur</th>
+                                              <th className="py-2.5 px-3">Target TSD</th>
+                                              <th className="py-2.5 px-3 text-center">Menetas</th>
+                                              <th className="py-2.5 px-3 text-right">Aksi</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-50 text-xs">
+                                            {pairingClutches.map((clutch) => {
+                                                const successRate = clutch.hatchedCount / clutch.eggCount;
+                                                const isFullHatch = successRate === 1;
+                                                const isPartialHatch = successRate > 0 && successRate < 1;
+                                                const isFailure = successRate === 0 && new Date(clutch.hatchDate || '') < new Date();
 
-                                            return (
-                                              <div key={clutch.id} className="relative">
-                                                <div className={cn(
-                                                  "absolute -left-[19px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-[3px] border-white shadow-sm z-10",
-                                                  isFullHatch ? "bg-emerald-500 ring-2 ring-emerald-100" : 
-                                                  isPartialHatch ? "bg-amber-500 ring-2 ring-amber-100" :
-                                                  isFailure ? "bg-rose-500 ring-2 ring-rose-100" : "bg-slate-200 ring-2 ring-slate-50"
-                                                )} />
-                                                <div className="flex items-center justify-between p-4 bg-white border border-slate-200/60 rounded-2xl shadow-sm">
-                                                  <div className="flex items-center gap-4">
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex flex-col items-center justify-center">
-                                                      <span className="text-[7px] font-black text-slate-400">#</span>
-                                                      <span className="text-[10px] font-black text-slate-600">{arr.length - idx}</span>
-                                                    </div>
-                                                    <div>
-                                                      <div className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{formatDate(clutch.layDate)}</div>
-                                                      <div className="flex items-center gap-1.5 mt-0.5">
-                                                        <span className="text-[8px] font-black text-amber-600 uppercase tracking-tighter bg-amber-50 px-1.5 py-0.5 rounded-md">{clutch.eggCount} Eggs</span>
-                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate max-w-[80px]">{clutch.incubator || 'Incubator A'}</span>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                  <div className="text-right pr-2">
-                                                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Hatched</div>
-                                                    <div className={cn(
-                                                      "text-sm font-black",
-                                                      isFullHatch ? "text-emerald-500" : 
-                                                      isPartialHatch ? "text-amber-500" :
-                                                      isFailure ? "text-rose-500" : "text-slate-400"
-                                                    )}>
-                                                      {clutch.hatchedCount} <span className="text-[9px] text-slate-300">/</span> {clutch.eggCount}
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })
-                                      ) : (
-                                        <div className="py-8 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-                                          <Database size={20} className="text-slate-200 mb-2" />
-                                          <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">No clutches logged</p>
-                                        </div>
-                                      )}
-                                    </div>
+                                                return (
+                                                  <tr key={clutch.id} className="hover:bg-slate-50/80 transition-colors">
+                                                    <td className="py-3 px-3.5 text-center">
+                                                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-800 font-black text-xs">
+                                                        #{clutch.clutchNumber}
+                                                      </span>
+                                                    </td>
+
+                                                    <td className="py-3 px-3">
+                                                      <div className="font-black text-slate-800 text-xs">{formatDate(clutch.layDate)}</div>
+                                                      <div className="text-[10px] text-slate-400 font-medium">{clutch.incubator || 'Incubator'}</div>
+                                                    </td>
+
+                                                    <td className="py-3 px-3">
+                                                      <span className="font-black text-slate-700 bg-amber-50 text-amber-700 border border-amber-200/50 px-2 py-0.5 rounded-md text-[10px] uppercase">
+                                                        {clutch.eggCount} Butir
+                                                      </span>
+                                                    </td>
+
+                                                    <td className="py-3 px-3">
+                                                      {clutch.targetSex ? (
+                                                        <span className={cn(
+                                                          "font-black text-[10px] uppercase px-2 py-0.5 rounded-md border inline-flex items-center gap-1",
+                                                          clutch.targetSex === 'TSF' ? "bg-pink-50 text-pink-700 border-pink-200" :
+                                                          clutch.targetSex === 'TSM' ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                                          "bg-purple-50 text-purple-700 border-purple-200"
+                                                        )}>
+                                                          {clutch.targetSex === 'TSF' ? '🌸 TSF' : clutch.targetSex === 'TSM' ? '⚡ TSM' : '🎲 Mix'}
+                                                        </span>
+                                                      ) : (
+                                                        <span className="text-slate-400 text-[10px] font-bold">-</span>
+                                                      )}
+                                                    </td>
+
+                                                    <td className="py-3 px-3 text-center">
+                                                      <span className={cn(
+                                                        "font-black text-xs px-2 py-0.5 rounded-md",
+                                                        isFullHatch ? "bg-emerald-50 text-emerald-600 border border-emerald-200" :
+                                                        isPartialHatch ? "bg-amber-50 text-amber-600 border border-amber-200" :
+                                                        isFailure ? "bg-rose-50 text-rose-600 border border-rose-200" :
+                                                        "bg-slate-50 text-slate-500 border border-slate-200"
+                                                      )}>
+                                                        {clutch.hatchedCount} / {clutch.eggCount}
+                                                      </span>
+                                                    </td>
+
+                                                    <td className="py-3 px-3 text-right">
+                                                      <button 
+                                                        onClick={(e) => { 
+                                                          e.stopPropagation(); 
+                                                          setSelectedClutchForLabel({ clutch, pairing });
+                                                        }}
+                                                        className="h-8 px-2.5 bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 transition-all rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 cursor-pointer"
+                                                        title="Cetak Label Clutch"
+                                                      >
+                                                        <Printer size={13} />
+                                                        <span className="hidden sm:inline">Label</span>
+                                                      </button>
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ) : (
+                                      <div className="py-8 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-center px-6">
+                                        <Database size={20} className="text-slate-200 mb-2" />
+                                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Belum ada data clutch yang dicatat</p>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1032,10 +1945,30 @@ export default function Breeding({ profile }: BreedingProps) {
                   })}
                 </div>
               ) : (
-                <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-16 flex flex-col items-center justify-center text-center px-6 shadow-sm">
-                   <BookOpen className="w-12 h-12 text-slate-200 mb-4" />
-                   <h3 className="font-bold text-slate-800">No Pairing History</h3>
-                   <p className="text-slate-400 text-xs font-medium max-w-[200px] mt-1">Belum ada pairing yang diselesaikan atau tidak ada yang cocok dengan filter pencarian.</p>
+                <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-14 flex flex-col items-center justify-center text-center px-6 shadow-sm">
+                  <Search className="w-10 h-10 text-slate-300 mb-3" />
+                  <h3 className="font-bold text-slate-800">
+                    {searchQuery || historyFilter !== 'all' || yearFilter !== 'All' 
+                      ? 'Tidak Ada History Cocok' 
+                      : 'Belum Ada Pairing History'}
+                  </h3>
+                  <p className="text-slate-400 text-xs font-medium max-w-[260px] mt-1">
+                    {searchQuery || historyFilter !== 'all' || yearFilter !== 'All'
+                      ? 'Tidak ditemukan pairing history yang sesuai dengan pencarian atau filter aktif.'
+                      : 'Pairing yang telah ditutup atau selesai akan tersimpan di sini.'}
+                  </p>
+                  {(searchQuery || historyFilter !== 'all' || yearFilter !== 'All') && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setHistoryFilter('all');
+                        setYearFilter('All');
+                      }}
+                      className="mt-4 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm"
+                    >
+                      Reset Pencarian & Filter
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1316,7 +2249,7 @@ export default function Breeding({ profile }: BreedingProps) {
               <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-amber-50/30">
                 <div>
                    <h2 className="text-2xl font-black text-amber-800 tracking-tight">Record Clutch</h2>
-                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mt-0.5">Clutch #{selectedPairing?.clutchCount ? selectedPairing.clutchCount + 1 : 1}</p>
+                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mt-0.5">Clutch #{clutchData.clutchNumber}</p>
                 </div>
                 <button onClick={() => setIsClutchModalOpen(false)} className="p-2 hover:bg-amber-100 rounded-full transition-colors"><X className="w-6 h-6 text-amber-400" /></button>
               </div>
@@ -1324,19 +2257,20 @@ export default function Breeding({ profile }: BreedingProps) {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1">Nomor Clutch</label>
-                      <input 
-                        type="number" 
-                        required
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all"
-                        value={clutchData.clutchNumber || ''}
-                        onChange={e => setClutchData({ ...clutchData, clutchNumber: parseInt(e.target.value) || 0 })}
-                      />
+                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1">
+                        Nomor Clutch
+                      </label>
+                      <div className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold flex items-center gap-1.5 select-none text-slate-800">
+                        <span className="font-black text-slate-900">#{clutchData.clutchNumber}</span>
+                        <span className="text-[11px] font-medium text-slate-400">otomatis</span>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-1">Jumlah Telur</label>
                       <input 
                         type="number" 
+                        min="1"
+                        max="20"
                         required
                         className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-amber-500 transition-all"
                         value={clutchData.eggCount || ''}
@@ -1354,9 +2288,74 @@ export default function Breeding({ profile }: BreedingProps) {
                       onChange={e => setClutchData({ ...clutchData, layDate: e.target.value })}
                     />
                   </div>
+
+                  {/* Target Kelamin & Suhu Inkubasi (TSD) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between pl-1">
+                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                        Target Inkubasi (TSD)
+                      </label>
+                      <span className="text-[10px] font-black text-amber-700 uppercase tracking-tight bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
+                        {clutchData.targetSex === 'TSF' ? 'Est. ~58 Hari (27°C)' : clutchData.targetSex === 'TSM' ? 'Est. ~42 Hari (31.5°C)' : 'Est. ~50 Hari (29°C)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setClutchData({ ...clutchData, targetSex: 'TSF' })}
+                        className={cn(
+                          "py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1",
+                          clutchData.targetSex === 'TSF'
+                            ? "bg-pink-50 border-pink-300 text-pink-700 shadow-sm ring-2 ring-pink-200"
+                            : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"
+                        )}
+                      >
+                        <span className="text-xs font-black uppercase tracking-tight flex items-center gap-1">
+                          🌸 Betina
+                        </span>
+                        <span className="text-[9px] font-bold opacity-75">TSF (~27°C)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setClutchData({ ...clutchData, targetSex: 'TSM' })}
+                        className={cn(
+                          "py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1",
+                          clutchData.targetSex === 'TSM'
+                            ? "bg-blue-50 border-blue-300 text-blue-700 shadow-sm ring-2 ring-blue-200"
+                            : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"
+                        )}
+                      >
+                        <span className="text-xs font-black uppercase tracking-tight flex items-center gap-1">
+                          ⚡ Jantan
+                        </span>
+                        <span className="text-[9px] font-bold opacity-75">TSM (~31.5°C)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setClutchData({ ...clutchData, targetSex: 'MIX' })}
+                        className={cn(
+                          "py-3 px-2 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1",
+                          clutchData.targetSex === 'MIX'
+                            ? "bg-purple-50 border-purple-300 text-purple-700 shadow-sm ring-2 ring-purple-200"
+                            : "bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-100"
+                        )}
+                      >
+                        <span className="text-xs font-black uppercase tracking-tight flex items-center gap-1">
+                          🎲 Random
+                        </span>
+                        <span className="text-[9px] font-bold opacity-75">Mix (~29°C)</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button type="submit" className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-xl shadow-amber-200 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4" /> Simpan Data Clutch
+                <button 
+                  type="submit" 
+                  disabled={isSavingClutch}
+                  className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold uppercase tracking-widest text-sm shadow-xl shadow-amber-200 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" /> {isSavingClutch ? 'Menyimpan...' : 'Simpan Data Clutch'}
                 </button>
               </form>
             </motion.div>
@@ -1429,9 +2428,10 @@ export default function Breeding({ profile }: BreedingProps) {
                   </button>
                   <button 
                     type="submit" 
-                    className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-red-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    disabled={isClosingPairing}
+                    className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-red-200 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    <HeartOff className="w-4 h-4" /> Close Pairing
+                    <HeartOff className="w-4 h-4" /> {isClosingPairing ? 'Menyimpan...' : 'Close Pairing'}
                   </button>
                 </div>
               </form>
@@ -1447,6 +2447,82 @@ export default function Breeding({ profile }: BreedingProps) {
         title={confirmConfig.title}
         message={confirmConfig.message}
       />
+
+      {/* Modal Cetak Label Wadah Telur (Clutch Egg Label) */}
+      <AnimatePresence>
+        {selectedClutchForLabel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" 
+              onClick={() => setSelectedClutchForLabel(null)} 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.95, y: 10 }} 
+              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative overflow-hidden z-10 space-y-5 p-6 sm:p-7"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                    <Printer className="w-5 h-5 text-slate-900" />
+                    Label Clutch
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    Clutch #{selectedClutchForLabel.clutch.clutchNumber} &bull; Stiker Inkubasi
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedClutchForLabel(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Preview Container */}
+              <div className="flex flex-col items-center justify-center p-4 sm:p-5 bg-slate-50/80 rounded-2xl border border-slate-100">
+                <div ref={clutchLabelRef} className="shadow-lg rounded-sm overflow-hidden bg-white">
+                  <ClutchEggLabel
+                    clutch={selectedClutchForLabel.clutch}
+                    pairing={selectedClutchForLabel.pairing}
+                    allGeckos={geckos}
+                    id="clutch-egg-label-preview"
+                  />
+                </div>
+                <div className="flex items-center gap-2 mt-3 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Format Presisi (3.5 × 3 cm) &bull; QR di Sudut Kanan Bawah
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={handleDownloadClutchLabel}
+                  disabled={isPrintingLabel}
+                  className="flex-1 h-12 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <Download size={16} />
+                  {isPrintingLabel ? 'Memproses...' : 'Download PNG'}
+                </button>
+                <button
+                  onClick={handlePrintClutchLabel}
+                  disabled={isPrintingLabel}
+                  className="flex-1 h-12 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <Printer size={16} />
+                  {isPrintingLabel ? 'Menyiapkan...' : 'Cetak Thermal'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { useGeckos } from '../GeckoProvider';
 import { UserProfile, Clutch, Pairing, FinanceTransaction } from '../types';
 import { differenceInDays, parseISO, format, addDays } from 'date-fns';
+import { playNotificationSound, SoundPreset } from '../lib/soundUtils';
 
 export interface ReminderItem {
   id: string;
@@ -17,8 +18,14 @@ export interface ReminderItem {
 export interface NotificationSettings {
   hatchReminder: boolean;
   candleReminder: boolean;
+  pairingCheckReminder: boolean; // Notifikasi pairing yg belum lanjut clutch 10-12 hari
   premiumReminder: boolean;
   financeReminder: boolean;
+  soundEnabled: boolean; // Audio notification toggle
+  soundVolume: number; // Volume 0 to 1
+  soundOnOpen: boolean; // Suara saat Notification Center dibuka
+  soundOnNewReminder: boolean; // Suara saat reminder baru muncul ketika user aktif
+  soundPreset: SoundPreset; // Pilihan suara bel sekali bunyi
 }
 
 interface NotificationContextType {
@@ -27,9 +34,11 @@ interface NotificationContextType {
   reminders: ReminderItem[];
   unreadCount: number;
   markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
   deleteReminder: (id: string) => void;
   premiumDaysLeft: number;
   upcomingHatchCount: number;
+  playTestSound: (preset?: SoundPreset, volume?: number) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -37,8 +46,14 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 const DEFAULT_SETTINGS: NotificationSettings = {
   hatchReminder: true,
   candleReminder: true,
+  pairingCheckReminder: true,
   premiumReminder: true,
   financeReminder: true,
+  soundEnabled: true,
+  soundVolume: 0.7,
+  soundOnOpen: true,
+  soundOnNewReminder: true,
+  soundPreset: 'bell',
 };
 
 export function NotificationProvider({ profile, children }: { profile: UserProfile | null, children: React.ReactNode }) {
@@ -46,8 +61,8 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
 
   // Load settings from localStorage
   const [settings, setSettings] = useState<NotificationSettings>(() => {
-    if (!profile?.uid) return DEFAULT_SETTINGS;
-    const saved = localStorage.getItem(`notif_settings_${profile.uid}`);
+    const key = profile?.uid ? `notif_settings_${profile.uid}` : 'notif_settings_guest';
+    const saved = localStorage.getItem(key) || localStorage.getItem('notif_settings_guest');
     if (saved) {
       try {
         return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
@@ -60,28 +75,46 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
 
   // Load read/deleted lists from localStorage
   const [readIds, setReadIds] = useState<string[]>(() => {
-    if (!profile?.uid) return [];
-    const saved = localStorage.getItem(`notif_read_${profile.uid}`);
+    const key = profile?.uid ? `notif_read_${profile.uid}` : 'notif_read_guest';
+    const saved = localStorage.getItem(key) || localStorage.getItem('notif_read_guest');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [deletedIds, setDeletedIds] = useState<string[]>(() => {
-    if (!profile?.uid) return [];
-    const saved = localStorage.getItem(`notif_deleted_${profile.uid}`);
+    const key = profile?.uid ? `notif_deleted_${profile.uid}` : 'notif_deleted_guest';
+    const saved = localStorage.getItem(key) || localStorage.getItem('notif_deleted_guest');
     return saved ? JSON.parse(saved) : [];
   });
 
   // Track settings, readIds, and deletedIds across logins
   useEffect(() => {
     if (profile?.uid) {
-      const savedSettings = localStorage.getItem(`notif_settings_${profile.uid}`);
-      setSettings(savedSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) } : DEFAULT_SETTINGS);
+      const savedSettings = localStorage.getItem(`notif_settings_${profile.uid}`) || localStorage.getItem('notif_settings_guest');
+      if (savedSettings) {
+        try {
+          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+        } catch (e) {
+          // ignore
+        }
+      }
 
-      const savedRead = localStorage.getItem(`notif_read_${profile.uid}`);
-      setReadIds(savedRead ? JSON.parse(savedRead) : []);
+      const savedRead = localStorage.getItem(`notif_read_${profile.uid}`) || localStorage.getItem('notif_read_guest');
+      if (savedRead) {
+        try {
+          setReadIds(JSON.parse(savedRead));
+        } catch (e) {
+          // ignore
+        }
+      }
 
-      const savedDeleted = localStorage.getItem(`notif_deleted_${profile.uid}`);
-      setDeletedIds(savedDeleted ? JSON.parse(savedDeleted) : []);
+      const savedDeleted = localStorage.getItem(`notif_deleted_${profile.uid}`) || localStorage.getItem('notif_deleted_guest');
+      if (savedDeleted) {
+        try {
+          setDeletedIds(JSON.parse(savedDeleted));
+        } catch (e) {
+          // ignore
+        }
+      }
     }
   }, [profile?.uid]);
 
@@ -91,6 +124,7 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
       if (profile?.uid) {
         localStorage.setItem(`notif_settings_${profile.uid}`, JSON.stringify(updated));
       }
+      localStorage.setItem('notif_settings_guest', JSON.stringify(updated));
       return updated;
     });
   };
@@ -106,6 +140,14 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
     });
   };
 
+  const markAllAsRead = () => {
+    const allIds = reminders.map(r => r.id);
+    setReadIds(allIds);
+    if (profile?.uid) {
+      localStorage.setItem(`notif_read_${profile.uid}`, JSON.stringify(allIds));
+    }
+  };
+
   const deleteReminder = (id: string) => {
     setDeletedIds(prev => {
       if (prev.includes(id)) return prev;
@@ -115,6 +157,10 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
       }
       return updated;
     });
+  };
+
+  const playTestSound = (preset?: SoundPreset, volume?: number) => {
+    playNotificationSound(volume ?? settings.soundVolume, preset ?? settings.soundPreset);
   };
 
   // Calculate Premium Days Left (stable countdown dynamically computed from profile.premiumExpiresAt)
@@ -261,6 +307,60 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
               actionLabel: 'Open Pair',
               actionPath: '/breeding',
             });
+          }
+        } catch (err) {}
+      });
+    }
+
+    // 1b. Pairing check for 10-12 days without clutch / next clutch
+    if (settings.pairingCheckReminder) {
+      pairings.forEach(p => {
+        const isActive = p.status === 'active' || !p.status;
+        if (!isActive) return;
+
+        try {
+          const sireName = p.sireName || 'Sire';
+          const damName = p.damName || 'Dam';
+
+          // Case A: Baru dipairing 10-12 hari tanpa clutch
+          if (!p.clutchCount || p.clutchCount === 0) {
+            if (p.pairingDate) {
+              const pairingDate = parseISO(p.pairingDate);
+              const daysActive = differenceInDays(today, pairingDate);
+              if (daysActive >= 10 && daysActive <= 12) {
+                calculated.push({
+                  id: `pairing-check-10-12-${p.id}`,
+                  type: 'no-clutch',
+                  category: 'high',
+                  title: `🔍 Cek Palpasi / Ovulasi (${daysActive} Hari)`,
+                  description: `Pairing ${sireName} × ${damName} sudah berjalan ${daysActive} hari belum ada clutch. Waktu tepat palpasi perut atau siapkan nesting box.`,
+                  date: format(pairingDate, 'MMM d, yyyy'),
+                  actionLabel: 'Buka Pairing',
+                  actionPath: '/breeding',
+                });
+              }
+            }
+          } else {
+            // Case B: Sudah ada clutch sebelumnya, cek 10-12 hari sejak clutch terakhir belum ada clutch lanjutan
+            const pairClutches = clutches.filter(c => c.pairingId === p.id && c.layDate);
+            if (pairClutches.length > 0) {
+              pairClutches.sort((a, b) => new Date(b.layDate).getTime() - new Date(a.layDate).getTime());
+              const latestClutch = pairClutches[0];
+              const layDate = parseISO(latestClutch.layDate);
+              const daysSinceLastClutch = differenceInDays(today, layDate);
+              if (daysSinceLastClutch >= 10 && daysSinceLastClutch <= 12) {
+                calculated.push({
+                  id: `pairing-next-clutch-10-12-${p.id}-${latestClutch.clutchNumber}`,
+                  type: 'no-clutch',
+                  category: 'important',
+                  title: `🥚 Cek Clutch Lanjutan (${daysSinceLastClutch} Hari)`,
+                  description: `Pairing ${sireName} × ${damName} sudah ${daysSinceLastClutch} hari sejak Clutch #${latestClutch.clutchNumber}. Cek tanda kehamilan telur berikutnya.`,
+                  date: format(layDate, 'MMM d, yyyy'),
+                  actionLabel: 'Buka Pairing',
+                  actionPath: '/breeding',
+                });
+              }
+            }
           }
         } catch (err) {}
       });
@@ -426,6 +526,32 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
     return reminders.filter(item => !readIds.includes(item.id)).length;
   }, [reminders, readIds]);
 
+  // Audio trigger: Sound played when a new reminder appears while user is actively using the app
+  const previousReminderIdsRef = useRef<string[]>([]);
+  const isInitialMountRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    const currentIds = reminders.map(r => r.id);
+
+    // Skip on initial mount so we don't startle user on initial load
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      previousReminderIdsRef.current = currentIds;
+      return;
+    }
+
+    // Determine if any brand new reminder appeared that wasn't previously in the list
+    const hasNewReminder = currentIds.some(id => !previousReminderIdsRef.current.includes(id));
+    previousReminderIdsRef.current = currentIds;
+
+    // Play only if enabled, user is actively on the tab (document not hidden)
+    if (hasNewReminder && settings.soundEnabled && settings.soundOnNewReminder) {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        playNotificationSound(settings.soundVolume, settings.soundPreset);
+      }
+    }
+  }, [reminders, settings.soundEnabled, settings.soundOnNewReminder, settings.soundVolume, settings.soundPreset]);
+
   return (
     <NotificationContext.Provider value={{
       settings,
@@ -433,9 +559,11 @@ export function NotificationProvider({ profile, children }: { profile: UserProfi
       reminders,
       unreadCount,
       markAsRead,
+      markAllAsRead,
       deleteReminder,
       premiumDaysLeft,
       upcomingHatchCount,
+      playTestSound,
     }}>
       {children}
     </NotificationContext.Provider>

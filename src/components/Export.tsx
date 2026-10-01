@@ -30,6 +30,7 @@ import { toPng } from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
 import { ProCardComponent } from './ProCardComponent';
 import { useGeckos } from '../GeckoProvider';
+import { GeckoIdLabel } from './GeckoIdLabel';
 
 interface ExportProps {
   profile: UserProfile | null;
@@ -50,7 +51,7 @@ export default function Export({ profile }: ExportProps) {
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [batchSearchTerm, setBatchSearchTerm] = useState<string>('');
   const [batchProgress, setBatchProgress] = useState<string>('');
-
+  
   // Firestore backup and counting states
   const [showJsonExportModal, setShowJsonExportModal] = useState(false);
   const [jsonExportCounts, setJsonExportCounts] = useState<{ [key: string]: number }>({});
@@ -260,13 +261,10 @@ export default function Export({ profile }: ExportProps) {
       if (!previewContainerRef.current) return;
       const horizontalPadding = window.innerWidth < 640 ? 16 : 96;
       const containerWidth = previewContainerRef.current.offsetWidth - horizontalPadding;
-      const targetWidth = activeTab === 'card' ? 900 : 227;
+      const targetWidth = activeTab === 'card' ? 900 : 540;
       
       if (containerWidth < targetWidth) {
         setPreviewScale(containerWidth / targetWidth);
-      } else if (activeTab === 'label' && containerWidth > targetWidth * 1.5) {
-        // Allow labels to scale up slightly if there's plenty of room
-        setPreviewScale(1.5);
       } else {
         setPreviewScale(1);
       }
@@ -487,17 +485,10 @@ export default function Export({ profile }: ExportProps) {
     try {
       const dataUrl = await toPng(labelRef.current, {
         cacheBust: true,
-        width: 227,
-        height: 151,
-        pixelRatio: 4,
-        backgroundColor: '#ffffff',
-        style: {
-          transform: 'scale(1)',
-          margin: '0',
-          padding: '8px 10px',
-          border: '1px solid #000000',
-          boxSizing: 'border-box'
-        }
+        width: 540,
+        height: 360,
+        pixelRatio: 3,
+        backgroundColor: '#ffffff'
       });
 
       const link = document.createElement('a');
@@ -619,17 +610,10 @@ export default function Export({ profile }: ExportProps) {
     try {
       const dataUrl = await toPng(labelRef.current, {
         cacheBust: true,
-        width: 227,
-        height: 151,
-        pixelRatio: 4,
-        backgroundColor: '#ffffff',
-        style: {
-          transform: 'scale(1)',
-          margin: '0',
-          padding: '8px 10px',
-          border: '1px solid #000000',
-          boxSizing: 'border-box'
-        }
+        width: 540,
+        height: 360,
+        pixelRatio: 3,
+        backgroundColor: '#ffffff'
       });
 
       const printWindow = window.open('', '_blank', 'width=600,height=600');
@@ -727,9 +711,9 @@ export default function Export({ profile }: ExportProps) {
 
         const dataUrl = await toPng(el, {
           cacheBust: true,
-          width: 227,
-          height: 151,
-          pixelRatio: 4,
+          width: 540,
+          height: 360,
+          pixelRatio: 3,
           backgroundColor: '#ffffff'
         });
         
@@ -1066,109 +1050,32 @@ export default function Export({ profile }: ExportProps) {
           </div>
         ) : activeTab === 'batch' ? (
             <div className="space-y-6" id="batch-unique-parent">
-             <div 
-               style={{ 
-                 position: 'absolute', 
-                 top: '-9999px', 
-                 left: '-9999px', 
-                 pointerEvents: 'none', 
-                 opacity: 0,
-                 zIndex: -110
-               }}
-               id="batch-render-area"
-             >
-               {selectedBatchIds.map((id) => {
-                 const gecko = geckos.find(g => g.id === id);
-                 if (!gecko) return null;
-                 return (
-                   <div 
-                     key={id} 
-                     id={`batch-label-${id}`}
-                     className="bg-white flex flex-col font-sans overflow-hidden shrink-0 flex-none"
-                     style={{ 
-                       width: '227px', 
-                       height: '151px', 
-                       backgroundColor: '#ffffff',
-                       padding: '8px 10px',
-                       boxSizing: 'border-box',
-                       border: '1px solid #000000'
-                     }}
-                   >
-                     <div className="flex gap-3 h-[115px] overflow-hidden">
-                       {/* QR Code Section */}
-                       <div className="flex flex-col items-center justify-center shrink-0 w-[82px]">
-                         <div className="p-2 bg-white border border-black shadow-sm flex items-center justify-center">
-                           <QRCodeSVG 
-                             value={`${getPublicUrl()}/v/${id}`} 
-                             size={64}
-                             level="H"
-                             includeMargin={false}
-                           />
-                         </div>
-                         <div className="text-[6px] font-black text-black uppercase tracking-wider mt-2 text-center leading-tight">SCAN TO VERIFY</div>
-                       </div>
-
-                       {/* Main Info Section */}
-                       <div className="flex-1 flex flex-col min-w-0">
-                         {/* NAME/ID */}
-                         <div className="flex flex-col justify-center border-b border-black/20 pt-0 pl-0 pr-0 pb-1 mt-0 mb-[-2px] min-h-[26px]">
-                           <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">NAME / ID</div>
-                           <div className="text-[8px] font-black text-black uppercase break-words line-clamp-2 leading-tight">{gecko.name}</div>
-                         </div>
-                         
-                         {/* GENETIC MORPH */}
-                         <div className="flex flex-col justify-center border-b border-black/20 py-1 min-h-[32px]">
-                           <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">GENETIC MORPH</div>
-                           <div className="text-[8px] font-black text-black uppercase line-clamp-3 leading-tight break-words">{gecko.morph || '-'}</div>
-                         </div>
-
-                         {/* STRAIN & HATCH DATE */}
-                         <div className="grid grid-cols-2 gap-0 border-b border-black/20 py-1 min-h-[26px]">
-                           <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
-                             <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">STRAIN</div>
-                             <div className="text-[7px] font-black text-black uppercase break-words line-clamp-1 leading-none">{gecko.albinoStrain || 'None'}</div>
-                           </div>
-                           <div className="flex flex-col justify-center pl-2 h-full">
-                             <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">HATCH DATE</div>
-                             <div className="text-[7px] font-black text-black uppercase truncate leading-none">{formatDateDMY(gecko.birthDate)}</div>
-                           </div>
-                         </div>
-
-                         {/* SIRE & DAM */}
-                         {(() => {
-                           const sireInfo = getParentLineageDisplay('sire', gecko, geckos);
-                           const damInfo = getParentLineageDisplay('dam', gecko, geckos);
-                           return (
-                             <div className="grid grid-cols-2 gap-0 py-1 min-h-[26px] mt-[-1px] mb-0">
-                               <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
-                                 <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">SIRE</div>
-                                 <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1]">{sireInfo.display}</div>
-                               </div>
-                               <div className="flex flex-col justify-center pl-2 h-full mt-[3px]">
-                                 <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-[-4px] mb-0.5">DAM</div>
-                                 <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1] mt-0">{damInfo.display}</div>
-                               </div>
-                             </div>
-                           );
-                         })()}
-                       </div>
-                     </div>
-
-                     {/* Footer Area */}
-                     <div className="mt-0 mb-[-3px] pt-1.5 border-t border-black/30 flex items-center justify-between">
-                       <div className="text-[7px] font-black uppercase tracking-widest text-black truncate max-w-[140px] mt-[-2px]">
-                         {profile?.farmName || 'GECKO FARM'}
-                       </div>
-                       <div className="flex items-center gap-2">
-                         <div className="text-[7px] font-black text-white px-2 py-0.5 rounded-sm bg-slate-900 uppercase tracking-widest">
-                           {gecko.gender || 'U'}
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 );
-               })}
-             </div>
+              <div 
+                style={{ 
+                  position: "absolute", 
+                  top: "-9999px", 
+                  left: "-9999px", 
+                  pointerEvents: "none", 
+                  opacity: 0,
+                  zIndex: -110
+                }}
+                id="batch-render-area"
+              >
+                {selectedBatchIds.map((id) => {
+                  const gecko = geckos.find(g => g.id === id);
+                  if (!gecko) return null;
+                  return (
+                    <GeckoIdLabel 
+                      key={id}
+                      id={`batch-label-${id}`}
+                      gecko={gecko}
+                      allGeckos={geckos}
+                      profile={profile}
+                      publicUrl={getPublicUrl()}
+                    />
+                  );
+                })}
+              </div>
 
               {!isPremium && (
                 <div className="bg-amber-50/60 border border-amber-100 p-8 rounded-[2.5rem] flex flex-col items-center text-center space-y-4">
@@ -1303,10 +1210,13 @@ export default function Export({ profile }: ExportProps) {
                  <div className="space-y-6 flex flex-col justify-between">
                     {/* Info / Sizing Guidelines */}
                     <div className="bg-white p-6 rounded-[2.4rem] border border-slate-100 shadow-sm space-y-4 font-sans">
-                       <div className="flex items-center gap-2">
-                          <PrinterIcon className="w-4 h-4 text-slate-400" />
-                          <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Batch Printing Info</h3>
-                       </div>
+                       <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <PrinterIcon className="w-4 h-4 text-slate-400" />
+                              <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">Batch Printing Info</h3>
+                           </div>
+                           
+                        </div>
                        <div className="space-y-3 font-sans text-xs text-slate-600 leading-relaxed font-semibold">
                           <p>
                              Fitur Cetak Massal dirancang khusus untuk mempercepat pelabelan kandang (rack/tub/incubator box).
@@ -1415,102 +1325,31 @@ export default function Export({ profile }: ExportProps) {
                                 </div>
                               )}
 
-                              {activeTab === 'label' && (
+                              {activeTab === 'label' && selectedGecko && (
                                 <div 
                                   className="flex justify-center transition-transform origin-top"
                                   style={{ 
-                                    width: '227px', 
-                                    height: `${151 * previewScale}px`,
+                                    width: '540px',
+                                    height: `${360 * previewScale}px`,
                                     transform: `scale(${previewScale})`
                                   }}
                                 >
-                                   <div 
-                                     ref={labelRef} 
-                                     className="bg-white flex flex-col font-sans overflow-hidden shrink-0 flex-none"
-                                     style={{ 
-                                       width: '227px', 
-                                       height: '151px', 
-                                       backgroundColor: '#ffffff',
-                                       padding: '8px 10px',
-                                       boxSizing: 'border-box',
-                                       border: '1px solid #000000'
-                                     }}
-                                     id="label-view"
-                                   >
-                                      <div className="flex gap-3 h-[115px] overflow-hidden">
-                                          {/* QR Code Section */}
-                                          <div className="flex flex-col items-center justify-center shrink-0 w-[82px]" id="qrfix">
-                                             <div className="p-2 bg-white border border-black shadow-sm flex items-center justify-center">
-                                                {currentGeckoId && (
-                                                  <QRCodeSVG 
-                                                    value={`${getPublicUrl()}/v/${currentGeckoId}`} 
-                                                    size={64}
-                                                    level="H"
-                                                    includeMargin={false}
-                                                  />
-                                                )}
-                                             </div>
-                                             <div className="text-[6px] font-black text-black uppercase tracking-wider mt-2 text-center leading-tight">SCAN TO VERIFY</div>
-                                          </div>
-
-                                          {/* Main Info Section */}
-                                          <div className="flex-1 flex flex-col min-w-0">
-                                             {/* NAME/ID */}
-                                             <div className="flex flex-col justify-center border-b border-black/20 pt-0 pl-0 pr-0 pb-1 mt-0 mb-[-2px] min-h-[26px]">
-                                                <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">NAME / ID</div>
-                                                <div className="text-[8px] font-black text-black uppercase break-words line-clamp-2 leading-tight">{selectedGecko.name}</div>
-                                             </div>
-                                             
-                                             {/* GENETIC MORPH */}
-                                             <div className="flex flex-col justify-center border-b border-black/20 py-1 min-h-[32px]">
-                                                <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">GENETIC MORPH</div>
-                                                <div className="text-[8px] font-black text-black uppercase line-clamp-3 leading-tight break-words">{selectedGecko.morph}</div>
-                                             </div>
-
-                                             {/* STRAIN & HATCH DATE */}
-                                             <div className="grid grid-cols-2 gap-0 border-b border-black/20 py-1 min-h-[26px]">
-                                                <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
-                                                   <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">STRAIN</div>
-                                                   <div className="text-[7px] font-black text-black uppercase break-words line-clamp-1 leading-none">{selectedGecko.albinoStrain || 'None'}</div>
-                                                </div>
-                                                <div className="flex flex-col justify-center pl-2 h-full">
-                                                   <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">HATCH DATE</div>
-                                                   <div className="text-[7px] font-black text-black uppercase truncate leading-none">{formatDateDMY(selectedGecko.birthDate)}</div>
-                                                </div>
-                                             </div>
-
-                                             {/* SIRE & DAM */}
-                                             {(() => {
-                                               const sireInfo = getParentLineageDisplay('sire', selectedGecko, geckos);
-                                               const damInfo = getParentLineageDisplay('dam', selectedGecko, geckos);
-                                               return (
-                                                 <div className="grid grid-cols-2 gap-0 py-1 min-h-[26px] mt-[-1px] mb-0">
-                                                   <div className="flex flex-col justify-center pr-2 border-r border-black/20 h-full">
-                                                      <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">SIRE</div>
-                                                      <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1]">{sireInfo.display}</div>
-                                                   </div>
-                                                   <div className="flex flex-col justify-center pl-2 h-full mt-[3px]">
-                                                      <div className="text-[6px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-[-4px] mb-0.5">DAM</div>
-                                                      <div className="text-[7px] font-bold text-slate-700 uppercase break-words line-clamp-2 italic leading-[1.1] mt-0">{damInfo.display}</div>
-                                                   </div>
-                                                </div>
-                                              );
-                                            })()}
-                                          </div>
-                                      </div>
-
-                                      {/* Footer Area */}
-                                      <div className="mt-0 mb-[-3px] pt-1.5 border-t border-black/30 flex items-center justify-between">
-                                         <div className="text-[7px] font-black uppercase tracking-widest text-black truncate max-w-[140px] mt-[-2px]">
-                                            {profile?.farmName || 'GECKO FARM'}
-                                         </div>
-                                         <div className="flex items-center gap-2">
-                                            <div className="text-[7px] font-black text-white px-2 py-0.5 rounded-sm bg-slate-900 uppercase tracking-widest">
-                                               {selectedGecko.gender}
-                                            </div>
-                                         </div>
-                                      </div>
-                                   </div>
+                                  <div 
+                                    ref={labelRef} 
+                                    id="label-view"
+                                    className="bg-white shadow-2xl flex items-center justify-center shrink-0 flex-none"
+                                    style={{
+                                      width: '540px',
+                                      height: '360px'
+                                    }}
+                                  >
+                                    <GeckoIdLabel 
+                                      gecko={selectedGecko}
+                                      allGeckos={geckos}
+                                      profile={profile}
+                                      publicUrl={getPublicUrl()}
+                                    />
+                                  </div>
                                 </div>
                               )}
                         </div>

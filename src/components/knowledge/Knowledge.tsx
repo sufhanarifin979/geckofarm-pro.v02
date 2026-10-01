@@ -120,7 +120,15 @@ export default function Knowledge({ profile }: { profile: UserProfile | null }) 
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                <Encyclopedia />
+                <Encyclopedia 
+                  onNavigateToLab={() => {
+                    if (isPremium) {
+                      setActiveTab('lab');
+                    } else {
+                      setIsPremiumModalOpen(true);
+                    }
+                  }} 
+                />
               </motion.div>
             ) : activeTab === 'lab' ? (
               <motion.div

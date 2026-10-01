@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, doc, updateDoc, getDocs, where } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType, registerListener, auth, getCachedAdminUsers, setCachedAdminUsers, clearCachedAdminUsers } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType, registerListener, auth, getCachedAdminUsers, setCachedAdminUsers, clearCachedAdminUsers, isFirestoreQuotaExceeded, setFirestoreQuotaExceeded } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { 
   Users, 
@@ -84,6 +84,25 @@ export default function AdminPanel() {
       return;
     }
 
+    // Try localStorage cache
+    try {
+      const localUsers = localStorage.getItem('cache_admin_users');
+      if (localUsers) {
+        const parsed = JSON.parse(localUsers);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProfiles(parsed);
+          setCachedAdminUsers(parsed);
+          setLoading(false);
+          if (isFirestoreQuotaExceeded) return;
+        }
+      }
+    } catch (e) {}
+
+    if (isFirestoreQuotaExceeded) {
+      setLoading(false);
+      return;
+    }
+
     const q = query(collection(db, 'users'));
     getDocs(q).then((snapshot) => {
       const profileData = snapshot.docs.map(doc => ({ 
@@ -92,8 +111,16 @@ export default function AdminPanel() {
       } as UserProfile));
       setProfiles(profileData);
       setCachedAdminUsers(profileData);
+      try {
+        localStorage.setItem('cache_admin_users', JSON.stringify(profileData));
+      } catch (e) {}
       setLoading(false);
     }).catch((error) => {
+      console.warn("Failed to fetch users in AdminPanel:", error);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('resource-exhausted')) {
+        setFirestoreQuotaExceeded(true);
+      }
       handleFirestoreError(error, OperationType.GET, 'users');
       setLoading(false);
     });
@@ -111,8 +138,16 @@ export default function AdminPanel() {
       } as UserProfile));
       setProfiles(profileData);
       setCachedAdminUsers(profileData);
+      try {
+        localStorage.setItem('cache_admin_users', JSON.stringify(profileData));
+      } catch (e) {}
     } catch (error) {
       console.error("Error refreshing users list:", error);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('resource-exhausted')) {
+        setFirestoreQuotaExceeded(true);
+      }
+      handleFirestoreError(error, OperationType.GET, 'users');
     } finally {
       setLoading(false);
     }

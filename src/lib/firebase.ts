@@ -66,7 +66,20 @@ export const signInWithGoogle = async () => {
 
 // Memory and Session cache to prevent repeated reads and save Firestore quota
 let profileCache: { [uid: string]: UserProfile } = {};
-export let isFirestoreQuotaExceeded = false;
+export let isFirestoreQuotaExceeded = (() => {
+  try {
+    const stored = localStorage.getItem('isFirestoreQuotaExceeded') || sessionStorage.getItem('isFirestoreQuotaExceeded');
+    const timestamp = localStorage.getItem('firestore_quota_exceeded_timestamp');
+    if (stored === 'true' && timestamp) {
+      const elapsed = Date.now() - Number(timestamp);
+      // Quota resets daily (~24 hours); maintain for 4 hours before retrying
+      if (elapsed < 4 * 3600 * 1000) {
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+})();
 
 // Global memory caches to save Firestore reads on non-realtime collections
 let morphsCache: any[] | null = null;
@@ -115,9 +128,16 @@ export const setFirestoreQuotaExceeded = (exceeded: boolean) => {
       localStorage.removeItem('firestoreQuotaExceeded');
       localStorage.removeItem('isFirestoreQuotaExceeded');
       localStorage.removeItem('quotaWarning');
+      localStorage.removeItem('firestore_quota_exceeded_timestamp');
     } catch (e) {
       console.warn("Failed to clear quota storage flags:", e);
     }
+  } else {
+    try {
+      localStorage.setItem('isFirestoreQuotaExceeded', 'true');
+      localStorage.setItem('firestore_quota_exceeded_timestamp', String(Date.now()));
+      sessionStorage.setItem('isFirestoreQuotaExceeded', 'true');
+    } catch (e) {}
   }
 
   if (changed) {
@@ -146,6 +166,7 @@ export const updateProfileCache = (uid: string, updated: UserProfile) => {
   profileCache[uid] = updated;
   try {
     sessionStorage.setItem(`profile_${uid}`, JSON.stringify(updated));
+    localStorage.setItem(`cache_profile_${uid}`, JSON.stringify(updated));
   } catch (e) {
     console.warn("Storage item setting failed:", e);
   }
@@ -212,7 +233,7 @@ export interface FirestoreErrorInfo {
   }
 }
 
-export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): FirestoreErrorInfo {
   const errMsg = error instanceof Error ? error.message : String(error);
   const isQuota = errMsg.toLowerCase().includes('quota') || 
                   errMsg.toLowerCase().includes('resource-exhausted') || 
@@ -235,8 +256,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  if (isQuota) {
+    console.warn('Firestore Quota Limit reached (handled gracefully):', JSON.stringify(errInfo));
+  } else {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  }
+  return errInfo;
 }
 
 export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> => {
@@ -259,7 +284,47 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
     console.warn("Failed to check sessionStorage:", e);
   }
 
-  // 3. Firestore Read (only if cache misses)
+  // 3. Fast Cache Check: Local Storage (persistent across reloads)
+  let localCachedProfile: UserProfile | null = null;
+  try {
+    const localCached = localStorage.getItem(`cache_profile_${user.uid}`);
+    if (localCached) {
+      console.log("CACHE HIT (localStorage): returning cached profile for user:", user.uid);
+      localCachedProfile = JSON.parse(localCached) as UserProfile;
+      profileCache[user.uid] = localCachedProfile;
+      if (isFirestoreQuotaExceeded) {
+        return localCachedProfile;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to check localStorage:", e);
+  }
+
+  // 4. If quota already exceeded, return offline fallback immediately to avoid throwing
+  if (isFirestoreQuotaExceeded) {
+    console.warn("Firestore quota is exceeded. Returning fallback profile without network call.");
+    if (localCachedProfile) {
+      return localCachedProfile;
+    }
+    const isAutoPremium = user.email === 'sufhan.arifin979@gmail.com';
+    const fallbackProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email || '',
+      farmName: 'My Gecko Farm',
+      farmPhotoUrl: '',
+      subscription: isAutoPremium ? 'premium' : 'free',
+      geckoCount: 0,
+      pairingCount: 0,
+      clutchCount: 0,
+      planLimit: isAutoPremium ? 10000 : 10,
+      premiumActivatedAt: isAutoPremium ? new Date() : null,
+      premiumExpiresAt: isAutoPremium ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null
+    };
+    updateProfileCache(user.uid, fallbackProfile);
+    return fallbackProfile;
+  }
+
+  // 5. Firestore Read (only if cache misses and quota is not exceeded)
   try {
     console.log("Fetching profile from Firestore (Cache Miss) for user:", user.uid);
     const userDocRef = doc(db, 'users', user.uid);
@@ -377,12 +442,20 @@ export const getOrCreateUserProfile = async (user: User): Promise<UserProfile> =
       return finalProfile;
     }
   } catch (error: any) {
-    console.error("Error in getOrCreateUserProfile (falling back to memory):", error);
-    
     // Quota or network failure detection
     const errMsg = error instanceof Error ? error.message : String(error);
-    if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('resource-exhausted') || error?.code === 'resource-exhausted') {
+    const isQuota = errMsg.toLowerCase().includes('quota') || 
+                    errMsg.toLowerCase().includes('resource-exhausted') || 
+                    error?.code === 'resource-exhausted';
+    if (isQuota) {
       setFirestoreQuotaExceeded(true);
+      console.warn("Firestore quota limit reached in getOrCreateUserProfile, gracefully falling back to local profile:", errMsg);
+    } else {
+      console.warn("Notice in getOrCreateUserProfile (falling back to memory):", error);
+    }
+
+    if (localCachedProfile) {
+      return localCachedProfile;
     }
 
     const isAutoPremium = user.email === 'sufhan.arifin979@gmail.com';

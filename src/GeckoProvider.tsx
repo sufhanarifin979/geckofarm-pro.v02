@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { db, markFirestoreSuccess, handleFirestoreError, OperationType } from './lib/firebase';
+import { db, markFirestoreSuccess, handleFirestoreError, OperationType, setFirestoreQuotaExceeded } from './lib/firebase';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { Gecko, Pairing, Clutch, UserProfile } from './types';
 
@@ -9,6 +9,8 @@ interface GeckoContextType {
   clutches: Clutch[];
   loading: boolean;
   refreshData: () => Promise<void>;
+  setClutches: React.Dispatch<React.SetStateAction<Clutch[]>>;
+  setPairings: React.Dispatch<React.SetStateAction<Pairing[]>>;
 }
 
 const GeckoContext = createContext<GeckoContextType | undefined>(undefined);
@@ -123,6 +125,13 @@ export function GeckoProvider({ profile, children }: { profile: UserProfile | nu
       }
 
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const isQuota = errMsg.toLowerCase().includes('quota') || 
+                      errMsg.toLowerCase().includes('resource-exhausted') || 
+                      (error as any)?.code === 'resource-exhausted';
+      if (isQuota) {
+        setFirestoreQuotaExceeded(true);
+      }
       console.warn("GeckoProvider refreshData Firestore query failed. Falling back to local cache:", error);
       loadFromCache();
       setLoading(false);
@@ -150,7 +159,7 @@ export function GeckoProvider({ profile, children }: { profile: UserProfile | nu
   }, [profile?.uid, loadFromCache, refreshData]);
 
   return (
-    <GeckoContext.Provider value={{ geckos, pairings, clutches, loading, refreshData }}>
+    <GeckoContext.Provider value={{ geckos, pairings, clutches, loading, refreshData, setClutches, setPairings }}>
       {children}
     </GeckoContext.Provider>
   );

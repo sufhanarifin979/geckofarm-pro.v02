@@ -80,6 +80,15 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [aftPlaceholder, setAftPlaceholder] = useState("E.G. WHITEOUT HET OREO");
 
+  // Read search URL param (e.g. from Encyclopedia "Cari di Koleksi")
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search');
+    if (searchParam) {
+      setSearch(searchParam);
+    }
+  }, [location.search]);
+
   // Toast System
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'error' }[]>([]);
 

@@ -113,12 +113,20 @@ export default function App() {
     const handleGlobalError = (e: ErrorEvent) => {
       const msg = `Global Error: ${e.message} at ${e.filename}:${e.lineno}`;
       addLog(msg);
+      if (e.message.toLowerCase().includes('quota') || e.message.toLowerCase().includes('resource-exhausted')) {
+        setQuotaWarning(true);
+        return;
+      }
       setHasError(e.message);
     };
 
     const handleUnhandledRejection = (e: PromiseRejectionEvent) => {
       const msg = e.reason instanceof Error ? e.reason.message : String(e.reason);
       addLog(`Unhandled Rejection: ${msg}`);
+      if (msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('resource-exhausted')) {
+        setQuotaWarning(true);
+        return;
+      }
       setHasError(msg);
     };
 
@@ -165,11 +173,18 @@ export default function App() {
             }
           } catch (profileErr: any) {
             const errStri = profileErr instanceof Error ? profileErr.message : String(profileErr);
-            addLog(`Gagal memuat profil asli: ${errStri}. Menggunakan profil fallback lokal.`);
-            setHasError(errStri);
+            addLog(`Memuat profil: ${errStri}. Menggunakan profil tersimpan.`);
             setQuotaWarning(true);
             const isAutoPremium = u.email === 'sufhan.arifin979@gmail.com';
-            userProfile = {
+            let cachedFallback: UserProfile | null = null;
+            try {
+              const localCached = localStorage.getItem(`cache_profile_${u.uid}`);
+              if (localCached) {
+                cachedFallback = JSON.parse(localCached) as UserProfile;
+              }
+            } catch (e) {}
+
+            userProfile = cachedFallback || {
               uid: u.uid,
               email: u.email || '',
               farmName: 'My Gecko Farm (Offline/Local)',
@@ -191,8 +206,11 @@ export default function App() {
         }
       } catch (error: any) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        addLog(`ERROR saat state-change: ${errorMsg}`);
-        setHasError(errorMsg);
+        addLog(`Info state-change: ${errorMsg}`);
+        const isQuota = errorMsg.toLowerCase().includes('quota') || errorMsg.toLowerCase().includes('resource-exhausted');
+        if (!isQuota) {
+          setHasError(errorMsg);
+        }
         // Do not force sign-out unless absolutely necessary, let them stay authenticated but with offline banner if wanted
       } finally {
         addLog("Status loading dinonaktifkan.");
