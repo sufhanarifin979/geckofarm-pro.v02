@@ -36,6 +36,13 @@ export function ClutchEggLabel({
   }
   const qrTarget = `${qrOrigin}/incubator?clutchId=${clutch.id || ''}`;
 
+  // Dynamic auto-scaling font sizes based on text length
+  const sireClutchText = sireInfo.display || '-';
+  const sireClutchFontSize = sireClutchText.length <= 22 ? '16px' : sireClutchText.length <= 36 ? '14.5px' : '13px';
+
+  const damClutchText = damInfo.display || '-';
+  const damClutchFontSize = damClutchText.length <= 22 ? '16px' : damClutchText.length <= 36 ? '14.5px' : '13px';
+
   return (
     <div
       id={id}
@@ -69,9 +76,9 @@ export function ClutchEggLabel({
             style={{
               backgroundColor: '#000000',
               color: '#ffffff',
-              fontSize: '13px',
+              fontSize: '13.5px',
               fontWeight: 900,
-              padding: '3px 8px',
+              padding: '3px 9px',
               borderRadius: '5px',
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
@@ -84,9 +91,9 @@ export function ClutchEggLabel({
           {clutch.eggCount > 0 && (
             <span
               style={{
-                fontSize: '13px',
-                fontWeight: 800,
-                color: '#334155',
+                fontSize: '14px',
+                fontWeight: 900,
+                color: '#000000',
                 letterSpacing: '0.02em'
               }}
             >
@@ -97,10 +104,10 @@ export function ClutchEggLabel({
           {clutch.targetSex && (
             <span
               style={{
-                fontSize: '9.5px',
+                fontSize: '11px',
                 fontWeight: 900,
-                color: clutch.targetSex === 'TSF' ? '#be185d' : clutch.targetSex === 'TSM' ? '#1d4ed8' : '#6b21a8',
-                letterSpacing: '0.02em',
+                color: '#000000',
+                letterSpacing: '0.03em',
                 textTransform: 'uppercase'
               }}
             >
@@ -112,11 +119,11 @@ export function ClutchEggLabel({
         <div style={{ textAlign: 'right' }}>
           <div
             style={{
-              fontSize: '9.5px',
+              fontSize: '10px',
               fontWeight: 800,
-              color: '#475569',
+              color: '#000000',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.06em',
               lineHeight: 1,
               marginBottom: '2px'
             }}
@@ -125,7 +132,7 @@ export function ClutchEggLabel({
           </div>
           <div
             style={{
-              fontSize: '16px',
+              fontSize: '17px',
               fontWeight: 900,
               color: '#000000',
               lineHeight: 1.1,
@@ -148,7 +155,7 @@ export function ClutchEggLabel({
         }}
       />
 
-      {/* 2. BODY: SIRE (50% ATAS) & DAM (50% BAWAH) DENGAN GARIS ABU-ABU PAS DI TENGAH */}
+      {/* 2. BODY: SIRE (50% ATAS) & DAM (50% BAWAH) DENGAN GARIS HITAM SOLID PAS DI TENGAH */}
       <div
         style={{
           display: 'flex',
@@ -172,34 +179,35 @@ export function ClutchEggLabel({
         >
           <div
             style={{
-              fontSize: '11px',
+              fontSize: '10.5px',
               fontWeight: 800,
-              color: '#334155', // Abu-abu tua jelas
-              letterSpacing: '0.04em',
+              color: '#000000',
+              letterSpacing: '0.06em',
               textTransform: 'uppercase',
               lineHeight: 1,
-              marginBottom: '3px'
+              marginBottom: '2px'
             }}
           >
             SIRE ( ♂ )
           </div>
           <div
             style={{
-              marginTop: '10px',
-              fontSize: '13.5px',
-              fontWeight: 800, // Medium-bold hitam solid
+              marginTop: '4px',
+              fontSize: sireClutchFontSize,
+              fontWeight: 900,
               color: '#000000',
               textTransform: 'uppercase',
-              lineHeight: 1.22,
+              lineHeight: 1.18,
               wordBreak: 'break-word',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              maxHeight: '40px'
             }}
             title={sireInfo.display}
           >
-            {sireInfo.display || '-'}
+            {sireClutchText}
           </div>
         </div>
 
@@ -213,7 +221,7 @@ export function ClutchEggLabel({
           }}
         />
 
-        {/* LOWER HALF: DAM (Tepat dekat di bawah garis pemisah abu-abu) */}
+        {/* LOWER HALF: DAM (Tepat dekat di bawah garis pemisah tengah) */}
         <div
           style={{
             flex: 1,
@@ -227,35 +235,36 @@ export function ClutchEggLabel({
         >
           <div
             style={{
-              fontSize: '11px',
+              fontSize: '10.5px',
               fontWeight: 800,
-              color: '#334155', // Abu-abu tua jelas
-              letterSpacing: '0.04em',
+              color: '#000000',
+              letterSpacing: '0.06em',
               textTransform: 'uppercase',
               lineHeight: 1,
-              marginBottom: '3px'
+              marginBottom: '2px'
             }}
           >
             DAM ( ♀ )
           </div>
           <div
             style={{
-              marginTop: '10px',
-              width: '318px',
-              fontSize: '13.5px',
-              fontWeight: 800, // Medium-bold hitam solid seragam
+              marginTop: '4px',
+              width: '100%',
+              fontSize: damClutchFontSize,
+              fontWeight: 900,
               color: '#000000',
               textTransform: 'uppercase',
-              lineHeight: 1.22,
+              lineHeight: 1.18,
               wordBreak: 'break-word',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              maxHeight: '40px'
             }}
             title={damInfo.display}
           >
-            {damInfo.display || '-'}
+            {damClutchText}
           </div>
         </div>
       </div>
@@ -287,23 +296,23 @@ export function ClutchEggLabel({
             style={{
               fontSize: '10px',
               fontWeight: 800,
-              color: '#334155',
+              color: '#000000',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.06em',
               lineHeight: 1,
-              marginBottom: '5px'
+              marginBottom: '4px'
             }}
           >
             EST HATCH
           </div>
           <div
             style={{
-              marginTop: '10px',
-              fontSize: '15px',
+              marginTop: '4px',
+              fontSize: '16px',
               fontWeight: 900,
               color: '#000000',
               lineHeight: 1,
-              letterSpacing: '0.15em'
+              letterSpacing: '0.12em'
             }}
           >
             ..................

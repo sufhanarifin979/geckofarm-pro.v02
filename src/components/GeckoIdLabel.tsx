@@ -38,6 +38,22 @@ export function GeckoIdLabel({
   const qrTarget = `${publicUrl}/v/${gecko.id || ''}`;
   const genderText = (gecko.gender || 'MALE').toUpperCase();
 
+  // Dynamic auto-scaling font sizes based on text length to maximize readability without clipping
+  const geckoName = gecko.name || 'TURBO';
+  const nameFontSize = geckoName.length <= 12 ? '17px' : geckoName.length <= 20 ? '15px' : '13.5px';
+
+  const morphText = gecko.morph || '-';
+  const morphFontSize = morphText.length <= 18 ? '16.5px' : morphText.length <= 32 ? '15px' : '13.5px';
+
+  const sireText = sireInfo.display || '-';
+  const sireFontSize = sireText.length <= 18 ? '16.5px' : sireText.length <= 32 ? '15px' : '13.5px';
+
+  const damText = damInfo.display || '-';
+  const damFontSize = damText.length <= 18 ? '16.5px' : damText.length <= 32 ? '15px' : '13.5px';
+
+  const strainText = gecko.albinoStrain || 'TREMPER';
+  const strainFontSize = strainText.length <= 10 ? '16.5px' : strainText.length <= 18 ? '15px' : '13.5px';
+
   return (
     <div
       id={id}
@@ -83,9 +99,9 @@ export function GeckoIdLabel({
           {/* SCAN TO VERIFY */}
           <div
             style={{
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 900,
-              letterSpacing: '0.07em',
+              letterSpacing: '0.08em',
               lineHeight: '14px',
               height: '14px',
               color: '#000000',
@@ -132,10 +148,10 @@ export function GeckoIdLabel({
           >
             <div
               style={{
-                fontSize: '11px',
+                fontSize: '10.5px',
                 fontWeight: 800,
-                color: '#8c939e',
-                letterSpacing: '0.06em',
+                color: '#000000',
+                letterSpacing: '0.07em',
                 lineHeight: '14px',
                 height: '14px',
                 textTransform: 'uppercase',
@@ -146,10 +162,10 @@ export function GeckoIdLabel({
             </div>
             <div
               style={{
-                fontSize: '15px',
+                fontSize: nameFontSize,
                 fontWeight: 900,
                 color: '#000000',
-                lineHeight: '1.2',
+                lineHeight: '1.18',
                 textTransform: 'uppercase',
                 width: '100%',
                 wordBreak: 'break-word',
@@ -157,10 +173,10 @@ export function GeckoIdLabel({
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
                 overflow: 'hidden',
-                marginTop: '5px'
+                marginTop: '4px'
               }}
             >
-              {gecko.name || 'TURBO'}
+              {geckoName}
             </div>
           </div>
         </div>
@@ -193,10 +209,10 @@ export function GeckoIdLabel({
             <div>
               <div
                 style={{
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 800,
-                  color: '#8c939e',
-                  letterSpacing: '0.06em',
+                  color: '#000000',
+                  letterSpacing: '0.07em',
                   lineHeight: '14px',
                   height: '14px',
                   textTransform: 'uppercase',
@@ -208,21 +224,21 @@ export function GeckoIdLabel({
               <div
                 style={{
                   width: '100%',
-                  fontSize: '13.5px',
+                  fontSize: morphFontSize,
                   fontWeight: 900,
                   color: '#000000',
-                  lineHeight: '1.22',
+                  lineHeight: '1.18',
                   textTransform: 'uppercase',
                   wordBreak: 'break-word',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  height: '34px',
-                  marginTop: '10px'
+                  maxHeight: '38px',
+                  marginTop: '4px'
                 }}
               >
-                {gecko.morph || '-'}
+                {morphText}
               </div>
             </div>
             <div style={{ width: '100%', height: '1.5px', backgroundColor: '#000000', flexShrink: 0 }} />
@@ -242,10 +258,10 @@ export function GeckoIdLabel({
             <div>
               <div
                 style={{
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 800,
-                  color: '#8c939e',
-                  letterSpacing: '0.06em',
+                  color: '#000000',
+                  letterSpacing: '0.07em',
                   lineHeight: '14px',
                   height: '14px',
                   textTransform: 'uppercase',
@@ -257,21 +273,21 @@ export function GeckoIdLabel({
               <div
                 style={{
                   width: '100%',
-                  fontSize: '13.5px',
+                  fontSize: sireFontSize,
                   fontWeight: 900,
                   color: '#000000',
-                  lineHeight: '1.22',
+                  lineHeight: '1.18',
                   textTransform: 'uppercase',
                   wordBreak: 'break-word',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  height: '34px',
-                  marginTop: '10px'
+                  maxHeight: '38px',
+                  marginTop: '4px'
                 }}
               >
-                {sireInfo.display || '-'}
+                {sireText}
               </div>
             </div>
             <div style={{ width: '100%', height: '1.5px', backgroundColor: '#000000', flexShrink: 0 }} />
@@ -291,10 +307,10 @@ export function GeckoIdLabel({
             <div>
               <div
                 style={{
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 800,
-                  color: '#8c939e',
-                  letterSpacing: '0.06em',
+                  color: '#000000',
+                  letterSpacing: '0.07em',
                   lineHeight: '14px',
                   height: '14px',
                   textTransform: 'uppercase',
@@ -306,21 +322,21 @@ export function GeckoIdLabel({
               <div
                 style={{
                   width: '100%',
-                  fontSize: '13.5px',
+                  fontSize: damFontSize,
                   fontWeight: 900,
                   color: '#000000',
-                  lineHeight: '1.22',
+                  lineHeight: '1.18',
                   textTransform: 'uppercase',
                   wordBreak: 'break-word',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  height: '34px',
-                  marginTop: '10px'
+                  maxHeight: '38px',
+                  marginTop: '4px'
                 }}
               >
-                {damInfo.display || '-'}
+                {damText}
               </div>
             </div>
             <div style={{ width: '100%', height: '1.5px', backgroundColor: '#000000', flexShrink: 0 }} />
@@ -353,10 +369,10 @@ export function GeckoIdLabel({
             >
               <div
                 style={{
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 800,
-                  color: '#8c939e',
-                  letterSpacing: '0.06em',
+                  color: '#000000',
+                  letterSpacing: '0.07em',
                   lineHeight: '14px',
                   height: '14px',
                   textTransform: 'uppercase',
@@ -367,12 +383,12 @@ export function GeckoIdLabel({
               </div>
               <div
                 style={{
-                  fontSize: '15px',
+                  fontSize: '16.5px',
                   fontWeight: 900,
                   color: '#000000',
-                  lineHeight: '1.2',
+                  lineHeight: '1.18',
                   textTransform: 'uppercase',
-                  marginTop: '5px'
+                  marginTop: '4px'
                 }}
               >
                 {formatDateDMY(gecko.birthDate) || '-'}
@@ -407,10 +423,10 @@ export function GeckoIdLabel({
             >
               <div
                 style={{
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 800,
-                  color: '#8c939e',
-                  letterSpacing: '0.06em',
+                  color: '#000000',
+                  letterSpacing: '0.07em',
                   lineHeight: '14px',
                   height: '14px',
                   textTransform: 'uppercase',
@@ -421,20 +437,20 @@ export function GeckoIdLabel({
               </div>
               <div
                 style={{
-                  fontSize: '15px',
+                  fontSize: strainFontSize,
                   fontWeight: 900,
                   color: '#000000',
-                  lineHeight: '1.2',
+                  lineHeight: '1.18',
                   textTransform: 'uppercase',
                   wordBreak: 'break-word',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden',
-                  marginTop: '5px'
+                  marginTop: '4px'
                 }}
               >
-                {gecko.albinoStrain || 'TREMPER'}
+                {strainText}
               </div>
             </div>
           </div>

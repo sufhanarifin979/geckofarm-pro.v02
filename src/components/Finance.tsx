@@ -49,6 +49,7 @@ export default function Finance({ profile }: FinanceProps) {
   const [transactions, setTransactions] = useState<FinanceTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Improvements State
@@ -67,6 +68,15 @@ export default function Finance({ profile }: FinanceProps) {
     category: 'Feed',
     amount: '',
     date: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+
+  // Income form state (Kategori dikosongkan agar bisa diinput manual)
+  const [incomeForm, setIncomeForm] = useState({
+    category: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    buyer: '',
     notes: ''
   });
 
@@ -294,6 +304,49 @@ export default function Finance({ profile }: FinanceProps) {
     } catch (err: any) {
       console.error("Error saving expense:", err);
       addToast(err.message || "Failed to save transaction", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAddIncome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+
+    const amountNum = parseFloat(incomeForm.amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      addToast("Silakan masukkan nominal pendapatan yang valid", "error");
+      return;
+    }
+
+    const categoryText = incomeForm.category.trim() || 'Penjualan';
+
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'finance_transactions'), {
+        userId: profile.uid,
+        type: 'sale',
+        category: categoryText,
+        amount: amountNum,
+        date: incomeForm.date,
+        buyer: incomeForm.buyer.trim() || '',
+        notes: incomeForm.notes.trim() || '',
+        createdAt: serverTimestamp()
+      });
+
+      addToast("Pendapatan berhasil dicatat!");
+      setIsIncomeModalOpen(false);
+      // Reset form
+      setIncomeForm({
+        category: '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        buyer: '',
+        notes: ''
+      });
+    } catch (err: any) {
+      console.error("Error saving income:", err);
+      addToast(err.message || "Gagal menyimpan pendapatan", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -598,11 +651,19 @@ export default function Finance({ profile }: FinanceProps) {
           </div>
 
           <button
-            onClick={() => setIsExpenseModalOpen(true)}
-            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-sans font-bold rounded-2xl transition-all text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/10 cursor-pointer"
+            onClick={() => setIsIncomeModalOpen(true)}
+            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-sans font-bold rounded-2xl transition-all text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/15 cursor-pointer"
           >
             <Plus size={16} />
-            Add Expense
+            Catat Pendapatan
+          </button>
+
+          <button
+            onClick={() => setIsExpenseModalOpen(true)}
+            className="px-5 py-3 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-sans font-bold rounded-2xl transition-all text-xs flex items-center gap-2 shadow-lg shadow-slate-800/10 cursor-pointer"
+          >
+            <Plus size={16} />
+            Catat Pengeluaran
           </button>
         </div>
       </div>
@@ -1042,16 +1103,20 @@ export default function Finance({ profile }: FinanceProps) {
 
               {selectedTransaction.type === 'sale' ? (
                 <div className="space-y-4 border-t border-slate-100 pt-4">
-                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Gecko Sale Detail</h4>
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">
+                    {selectedTransaction.geckoId ? 'Gecko Sale Detail' : 'Manual Income Detail'}
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Buyer</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Buyer / Client</p>
                       <p className="text-xs font-bold text-slate-800 mt-1">{selectedTransaction.buyer || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Gecko Registry Name / ID</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        {selectedTransaction.geckoId ? 'Gecko Registry ID' : 'Income Category'}
+                      </p>
                       <p className="text-xs font-bold text-slate-800 mt-1">
-                        {selectedGeckoDetails?.name || selectedTransaction.geckoId || '-'}
+                        {selectedGeckoDetails?.name || selectedTransaction.geckoId || selectedTransaction.category || 'Penjualan'}
                       </p>
                     </div>
                     {selectedGeckoDetails && (
@@ -1059,22 +1124,26 @@ export default function Finance({ profile }: FinanceProps) {
                         🦎 <span className="font-bold text-slate-700">{selectedGeckoDetails.name}</span> ({selectedGeckoDetails.morph})
                       </div>
                     )}
-                    <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Purchase Price</p>
-                      <p className="text-xs font-bold text-slate-800 mt-1">
-                        {selectedGeckoDetails?.purchasePrice ? formatIDR(selectedGeckoDetails.purchasePrice) : 'Rp 0'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sale Price</p>
-                      <p className="text-xs font-black text-emerald-600 mt-1">{formatIDR(selectedTransaction.amount)}</p>
-                    </div>
-                    <div className="col-span-2 border-t border-dashed border-slate-200 pt-3 flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Profit</span>
-                      <span className="text-sm font-black text-emerald-600">
-                        {formatIDR(selectedTransaction.amount - (selectedGeckoDetails?.purchasePrice || 0))}
-                      </span>
-                    </div>
+                    {selectedTransaction.geckoId && (
+                      <>
+                        <div>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Purchase Price</p>
+                          <p className="text-xs font-bold text-slate-800 mt-1">
+                            {selectedGeckoDetails?.purchasePrice ? formatIDR(selectedGeckoDetails.purchasePrice) : 'Rp 0'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Sale Price</p>
+                          <p className="text-xs font-black text-emerald-600 mt-1">{formatIDR(selectedTransaction.amount)}</p>
+                        </div>
+                        <div className="col-span-2 border-t border-dashed border-slate-200 pt-3 flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Estimated Profit</span>
+                          <span className="text-sm font-black text-emerald-600">
+                            {formatIDR(selectedTransaction.amount - (selectedGeckoDetails?.purchasePrice || 0))}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -1197,12 +1266,114 @@ export default function Finance({ profile }: FinanceProps) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 mt-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-sans font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                className="w-full py-4 mt-2 bg-slate-900 hover:bg-black disabled:opacity-50 text-white font-sans font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-slate-900/10 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
               >
                 {isSubmitting ? (
                   <Loader2 size={16} className="animate-spin" />
                 ) : (
                   <span>Record Expense</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Income Modal Form */}
+      {isIncomeModalOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsIncomeModalOpen(false)} />
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative overflow-hidden p-8 animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setIsIncomeModalOpen(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center">
+                <ArrowUpRight size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Catat Pendapatan</h3>
+                <p className="text-xs text-slate-400">Tambah transaksi pemasukan baru secara manual</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddIncome} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">
+                  Kategori Pendapatan (Bebas / Manual)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ketik kategori (misal: Jual Borongan, Telur, Dubia, dll)"
+                  value={incomeForm.category}
+                  onChange={e => setIncomeForm({ ...incomeForm, category: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all focus:outline-none"
+                />
+                <p className="text-[10px] text-slate-400 px-1">
+                  *Bisa diketik bebas sesuai kebutuhan. Jika kosong, default "Penjualan".
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Nominal (Rp)</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="Contoh: 500000"
+                  value={incomeForm.amount}
+                  onChange={e => setIncomeForm({ ...incomeForm, amount: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Tanggal</label>
+                  <input
+                    type="date"
+                    required
+                    value={incomeForm.date}
+                    onChange={e => setIncomeForm({ ...incomeForm, date: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-xs focus:border-emerald-500 transition-all focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Pembeli / Klien</label>
+                  <input
+                    type="text"
+                    placeholder="Nama pembeli (opsional)"
+                    value={incomeForm.buyer}
+                    onChange={e => setIncomeForm({ ...incomeForm, buyer: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-xs focus:border-emerald-500 transition-all focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest px-1">Keterangan / Catatan</label>
+                <textarea
+                  placeholder="Contoh: Jual paket borongan 3 baby tremper ke Om Rudi"
+                  rows={2}
+                  value={incomeForm.notes}
+                  onChange={e => setIncomeForm({ ...incomeForm, notes: e.target.value })}
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all focus:outline-none resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 mt-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-sans font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/15 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <span>Simpan Pendapatan</span>
                 )}
               </button>
             </form>
