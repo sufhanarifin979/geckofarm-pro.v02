@@ -23,7 +23,8 @@ import {
   Sparkles,
   Info,
   GitGraph,
-  BookOpen
+  BookOpen,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Gecko, UserProfile, WeightLog, ActivityLog } from '../types';
@@ -35,6 +36,7 @@ import { cn, formatDateDMY, getParentLineageDisplay } from '../lib/utils';
 import ConfirmationModal from './ConfirmationModal';
 import LineageChart from './LineageChart';
 import PedigreeSearchSelect from './PedigreeSearchSelect';
+import ImportExcelModal from './ImportExcelModal';
 import { autoCropToSquare, uploadGeckoImage, deleteGeckoImage } from '../lib/imageUtils';
 import Tooltip from './ui/Tooltip';
 import { Loader2 } from 'lucide-react';
@@ -67,6 +69,7 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
   const [speciesFilter, setSpeciesFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedGecko, setSelectedGecko] = useState<Gecko | null>(null);
   const [activeViewTab, setActiveViewTab] = useState<'details' | 'lineage'>('details');
@@ -620,15 +623,26 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
           <h2 className="text-[10px] font-black uppercase text-slate-600 tracking-[0.2em] mb-1">Stock Collection</h2>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Gecko Registry</h1>
         </div>
-        <Tooltip content="Add a new gecko to your collection">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           <button 
-            onClick={() => { resetForm(); setIsModalOpen(true); }}
-            className="w-full sm:w-auto btn-primary py-4 px-8 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-600 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all"
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex-1 sm:flex-initial py-4 px-6 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all cursor-pointer"
           >
-            <Plus size={18} />
-            New Gecko
+            <FileSpreadsheet size={18} className="text-emerald-600" />
+            Import Excel
           </button>
-        </Tooltip>
+
+          <Tooltip content="Add a new gecko to your collection">
+            <button 
+              onClick={() => { resetForm(); setIsModalOpen(true); }}
+              className="flex-1 sm:flex-initial btn-primary py-4 px-8 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-emerald-600 shadow-xl shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+            >
+              <Plus size={18} />
+              New Gecko
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-3">
@@ -1782,6 +1796,25 @@ export default function Registry({ profile, setProfile }: RegistryProps) {
           </div>
         </div>
       )}
+
+      {/* Import Excel Modal */}
+      <ImportExcelModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        profile={profile}
+        existingGeckos={geckos}
+        onSuccess={async (importedCount) => {
+          try {
+            await refreshData();
+          } catch (e) {
+            console.warn("Soft refresh failed after excel import:", e);
+          }
+          if (profile) {
+            setProfile(prev => prev ? { ...prev, geckoCount: prev.geckoCount + importedCount } : null);
+          }
+        }}
+        addToast={addToast}
+      />
 
     </div>
   );

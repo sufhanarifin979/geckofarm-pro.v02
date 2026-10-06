@@ -84,7 +84,12 @@ export default function HelpCenter({ profile }: HelpCenterProps) {
         {
           id: 'reg-2',
           question: 'Bagaimana menambahkan gecko baru?',
-          answer: 'Buka menu Registry dari sidebar, lalu klik tombol "Add Gecko" di pojok kanan atas. Isi formulir data seperti Nama/ID, Genotipe/Morf, Jenis Kelamin (Male, Female, Unsex), Tanggal Lahir (Hatch Date), status ketersediaan, silsilah induk (Sire/Dam), harga pembelian, foto, dan informasi tambahan. Terakhir, klik "Save Gecko" untuk menyimpannya.'
+          answer: 'Buka menu Registry dari sidebar, lalu klik tombol "New Gecko" di pojok kanan atas. Isi formulir data seperti Nama/ID, Genotipe/Morf, Spesies (Leopard Gecko / AFT), Jenis Kelamin (Male, Female, Unsex), Tanggal Lahir (Hatch Date), status ketersediaan, silsilah induk (Sire/Dam), harga pembelian, foto, dan catatan tambahan. Terakhir, klik "Save Gecko" untuk menyimpannya.'
+        },
+        {
+          id: 'reg-excel',
+          question: 'Bagaimana cara import data gecko massal dari Excel / Spreadsheet?',
+          answer: 'Buka menu Registry, lalu klik tombol "Import Excel" di samping tombol New Gecko:\n1. Unduh Template: Klik "Download Template Excel (.xlsx)" untuk mendapatkan format baku yang sudah rapi beserta contoh isiannya.\n2. Isi Data: Buka file Excel tersebut dan isi catatan gecko Anda. Kolom yang wajib diisi hanyalah "Nama / Tag ID" dan "Morph". Kolom lainnya bersifat opsional (Spesies, Albino Strain, Jenis Kelamin, Tanggal Menetas, Status, Sire, Dam, Harga Beli, Catatan).\n3. Unggah File: Klik tombol "Pilih File Excel" dan unggah file .xlsx, .xls, atau .csv dari perangkat Anda.\n4. Pratinjau & Validasi: Sistem akan memeriksa kelengkapan data dan mendeteksi apakah ada nama gecko yang sudah pernah terdaftar di farm Anda.\n5. Eksekusi: Centang opsi "Lewati nama yang sudah ada di farm" untuk mencegah data ganda, lalu klik "Impor Gecko". Puluhan hingga ratusan data gecko Anda akan langsung tersimpan di database dalam hitungan detik!'
         },
         {
           id: 'reg-3',
@@ -93,18 +98,23 @@ export default function HelpCenter({ profile }: HelpCenterProps) {
         },
         {
           id: 'reg-4',
-          question: 'Apa arti status Holdback?',
-          answer: 'Status Holdback berarti gecko tersebut sengaja disimpan oleh farm Anda karena diproyeksikan sebagai calon indukan masa depan atau untuk kelanjutan line breeding sendiri.'
+          question: 'Apa arti status Keep (Holdback)?',
+          answer: 'Status Keep (Holdback) berarti gecko tersebut sengaja disimpan dan dirawat oleh farm Anda sebagai koleksi pribadi, maskot farm, atau calon indukan potensial untuk proyek breeding masa depan.'
         },
         {
           id: 'reg-5',
           question: 'Apa arti status Sold?',
-          answer: 'Status Sold menandakan gecko tersebut telah terjual. Saat status diubah menjadi Sold, sistem secara otomatis memberikan opsi untuk mengarahkan Anda mencatat transaksi penjualannya ke modul Finance.'
+          answer: 'Status Sold menandakan gecko tersebut telah terjual. Saat status diubah menjadi Sold, sistem secara otomatis memunculkan jendela penjualan untuk mencatat harga jual, tanggal transaksi, dan nama pembeli, yang otomatis langsung tersimpan ke modul Finance.'
         },
         {
           id: 'reg-6',
           question: 'Bagaimana mengedit data gecko?',
-          answer: 'Pada halaman Registry, cari gecko yang ingin diubah, klik tombol aksi atau ikon pensil (Edit) di sebelah baris data gecko tersebut. Ubah informasi yang Anda inginkan pada formulir, lalu klik "Save Changes" untuk menyimpan pembaruan data.'
+          answer: 'Pada halaman Registry, cari gecko yang ingin diubah, klik tombol aksi atau ikon pensil (Edit) di kartu gecko tersebut. Ubah informasi yang Anda inginkan pada formulir, lalu klik "Save Changes" untuk menyimpan pembaruan data.'
+        },
+        {
+          id: 'reg-lineage',
+          question: 'Bagaimana cara melihat silsilah keluarga (Lineage Chart)?',
+          answer: 'Pada kartu gecko di Registry, klik tombol detail (ikon mata atau kartu gecko). Di jendela detail yang muncul, pilih tab "Lineage". Sistem akan menampilkan pohon silsilah keluarga visual yang menghubungkan gecko tersebut ke induk jantan (Sire) dan induk betina (Dam), hingga generasi kakek-nenek jika sudah terdaftar di farm Anda.'
         }
       ]
     },
@@ -205,17 +215,17 @@ export default function HelpCenter({ profile }: HelpCenterProps) {
         {
           id: 'fin-1',
           question: 'Bagaimana mencatat penjualan gecko?',
-          answer: 'Masuk ke Gecko Registry, lalu buka data gecko yang ingin dijual.\nTekan tombol Edit.\nUbah Status menjadi Sold.\nLengkapi informasi penjualan (harga jual, tanggal penjualan, pembeli jika tersedia).\nTekan Save.\nSetelah data disimpan, transaksi penjualan akan otomatis dibuat di menu Finance sebagai Income, sehingga Anda tidak perlu memasukkan transaksi secara manual lagi.'
+          answer: 'Masuk ke Gecko Registry, lalu buka data gecko yang ingin dijual.\n1. Tekan tombol Edit (ikon pensil).\n2. Ubah Status menjadi Sold.\n3. Lengkapi informasi penjualan pada jendela pop-up (harga jual, tanggal penjualan, dan nama pembeli jika ada).\n4. Tekan Confirm Sale.\nTransaksi penjualan gecko ini akan otomatis tercatat di menu Finance sebagai pemasukan (Income) tanpa perlu diinput ulang.'
         },
         {
           id: 'fin-1-b',
-          question: 'Apakah saya perlu mencatat penjualan lagi di Finance?',
-          answer: 'Tidak perlu.\nSetiap gecko yang diubah statusnya menjadi Sold akan otomatis membuat transaksi pemasukan di Finance.\nMenu Finance hanya digunakan untuk melihat laporan keuangan atau menambahkan transaksi lain seperti pengeluaran, pembelian perlengkapan, pakan, obat, listrik, dan biaya operasional lainnya.'
+          question: 'Bagaimana mencatat pemasukan manual (non-gecko / borongan)?',
+          answer: 'Selain pemasukan otomatis dari penjualan gecko, Anda dapat mencatat segala bentuk pendapatan lain secara manual:\n1. Buka menu Finance, lalu klik tombol "+ Catat Pendapatan".\n2. Masukkan nominal uang yang diterima.\n3. Masukkan kategori atau sumber pemasukan secara bebas (contoh: "Penjualan Borongan", "Pakan Jangkrik/Dubia", "Kalsium & Vitamin", "Jasa Kawin/Stud Fee", atau "Aksesoris Kandang").\n4. Tentukan tanggal dan catatan transaksi, lalu klik Simpan.\nTransaksi ini akan langsung menambah total omzet (Revenue) dan laba bersih farm Anda.'
         },
         {
           id: 'fin-2',
           question: 'Bagaimana mencatat pengeluaran?',
-          answer: 'Pengeluaran tidak dibuat otomatis. Untuk mencatat biaya operasional seperti pakan, suplemen, listrik, inkubator, obat, maupun perlengkapan kandang, buka menu Finance kemudian pilih Add Expense.'
+          answer: 'Pengeluaran dicatat secara manual untuk memantau biaya operasional farm:\n1. Buka menu Finance, lalu klik tombol "Catat Pengeluaran".\n2. Masukkan nominal biaya dan pilih/ketik kategori (seperti pakan, suplemen, listrik, inkubator, obat, atau perlengkapan kandang).\n3. Tentukan tanggal dan catatan, lalu klik Simpan.'
         },
         {
           id: 'fin-3',
