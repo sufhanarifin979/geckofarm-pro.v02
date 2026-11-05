@@ -175,3 +175,106 @@ export interface MorphEntry {
   created_at?: any;
   updated_at?: any;
 }
+
+// --- PANDUAN GENETIKA (LEARNING CENTER) TYPES ---
+export type GuideSpecies = 'Umum' | 'Leopard Gecko' | 'African Fat-Tailed Gecko';
+export type GuideLevel = 'Pemula' | 'Menengah' | 'Lanjutan';
+export type GuideAccessLevel = 'free' | 'premium';
+export type GuideStatus = 'draft' | 'published';
+export type GuideCtaType = 'none' | 'morph_calculator' | 'encyclopedia' | 'breeder_ai';
+
+export interface GuideQuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface GuideGlossaryTerm {
+  term: string;
+  definition: string;
+  species: GuideSpecies;
+  category?: string;
+}
+
+export interface GeneticsGuideMeta {
+  id?: string;
+  title: string;
+  slug: string;
+  subtitle?: string;
+  category: string;
+  species: GuideSpecies;
+  level: GuideLevel;
+  order: number;
+  readTimeMinutes?: number;
+  coverImageUrl?: string;
+  imageCaption?: string;
+  status: GuideStatus;
+  accessLevel: GuideAccessLevel;
+  ctaType?: GuideCtaType;
+  ctaLabel?: string;
+  hasQuiz?: boolean;
+  hasGlossary?: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export interface GeneticsGuideBody {
+  guideId: string;
+  status: GuideStatus;
+  accessLevel: GuideAccessLevel;
+  content: string;
+  exampleTitle?: string;
+  exampleContent?: string;
+  warningTitle?: string;
+  warningContent?: string;
+  diagramImageUrl?: string;
+  diagramCaption?: string;
+  summaryPoints?: string[];
+  quiz?: GuideQuizQuestion[];
+  glossaryTerms?: GuideGlossaryTerm[];
+  updatedAt?: any;
+}
+
+export interface GeneticsGuideFull extends GeneticsGuideMeta {
+  content: string;
+  exampleTitle?: string;
+  exampleContent?: string;
+  warningTitle?: string;
+  warningContent?: string;
+  diagramImageUrl?: string;
+  diagramCaption?: string;
+  summaryPoints?: string[];
+  quiz?: GuideQuizQuestion[];
+  glossaryTerms?: GuideGlossaryTerm[];
+}
+
+// --- GLOSARIUM GENETIKA & BREEDING TYPES ---
+export type GlossaryCategory =
+  | 'Dasar Genetika'
+  | 'Pola Pewarisan'
+  | 'Status Genetik'
+  | 'Persilangan'
+  | 'Analisis Breeding'
+  | 'Morph & Seleksi'
+  | 'Risiko Genetik';
+
+export interface GeneticsGlossaryItem {
+  id: string;
+  term: string;
+  slug: string;
+  category: GlossaryCategory | string;
+  species: GuideSpecies;
+  shortDefinition: string;
+  definition: string;
+  breedingExample?: string;
+  importantNotes?: string;
+  relatedGuideId?: string;
+  relatedGuideTitle?: string;
+  order: number;
+  status: GuideStatus;
+  createdAt?: any;
+  updatedAt?: any;
+}
+

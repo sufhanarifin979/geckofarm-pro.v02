@@ -16,13 +16,16 @@ import {
   Calendar,
   Layers,
   BookOpen,
-  RotateCw
+  RotateCw,
+  GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import AdminEncyclopedia from './AdminEncyclopedia';
+import AdminGeneticsGuide from './AdminGeneticsGuide';
+import AdminGeneticsGlossary from './AdminGeneticsGlossary';
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'users' | 'encyclopedia'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'encyclopedia' | 'guides' | 'glossary'>('users');
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -265,10 +268,10 @@ export default function AdminPanel() {
           <p className="text-slate-500 text-sm font-medium">Manage user subscriptions and global research data.</p>
         </div>
 
-        <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl">
+        <div className="flex flex-wrap bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl gap-1">
            <button 
              onClick={() => setActiveTab('users')}
-             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                activeTab === 'users' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm' : 'text-slate-400'
              }`}
            >
@@ -277,12 +280,30 @@ export default function AdminPanel() {
            </button>
            <button 
              onClick={() => setActiveTab('encyclopedia')}
-             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
                activeTab === 'encyclopedia' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm' : 'text-slate-400'
              }`}
            >
              <BookOpen size={14} />
              Encyclopedia
+           </button>
+           <button 
+             onClick={() => setActiveTab('guides')}
+             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+               activeTab === 'guides' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm' : 'text-slate-400'
+             }`}
+           >
+             <GraduationCap size={14} />
+             Panduan Genetika
+           </button>
+           <button 
+             onClick={() => setActiveTab('glossary')}
+             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+               activeTab === 'glossary' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm' : 'text-slate-400'
+             }`}
+           >
+             <BookOpen size={14} />
+             Glosarium
            </button>
         </div>
       </div>
@@ -435,7 +456,7 @@ export default function AdminPanel() {
               </table>
             </div>
           </motion.div>
-        ) : (
+        ) : activeTab === 'encyclopedia' ? (
           <motion.div 
             key="encyclopedia-tab"
             initial={{ opacity: 0, y: 10 }}
@@ -443,6 +464,24 @@ export default function AdminPanel() {
             exit={{ opacity: 0, y: -10 }}
           >
             <AdminEncyclopedia />
+          </motion.div>
+        ) : activeTab === 'guides' ? (
+          <motion.div 
+            key="guides-tab"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminGeneticsGuide />
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="glossary-tab"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminGeneticsGlossary />
           </motion.div>
         )}
       </AnimatePresence>

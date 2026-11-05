@@ -14,7 +14,8 @@ import {
   ArrowRight,
   LayoutDashboard,
   Thermometer,
-  Download
+  Download,
+  GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserProfile } from '../types';
@@ -260,6 +261,30 @@ export default function HelpCenter({ profile }: HelpCenterProps) {
           id: 'morph-3',
           question: 'Bagaimana membaca data genetika morph?',
           answer: 'Setiap kartu morph menyajikan informasi berupa klasifikasi genetik (misal: Recessive, Co-Dominant, atau Polygenetic), kecocokan visual, efek kombinasi genetik, dan tips penting dalam menyilangkan morph tersebut.'
+        }
+      ]
+    },
+    {
+      id: 'genetics-guide',
+      title: 'Panduan Genetika',
+      description: 'Pusat belajar genetika untuk pemula (LG & AFT)',
+      icon: GraduationCap,
+      color: 'text-teal-600 bg-teal-500/10 border-teal-500/20',
+      items: [
+        {
+          id: 'guide-1',
+          question: 'Apa fungsi Panduan Genetika dan apakah gratis?',
+          answer: 'Panduan Genetika adalah pusat pembelajaran interaktif bagi pemula maupun penghobi untuk memahami konsep dasar genetika sebelum menggunakan Morph Calculator atau Breeder AI Analysis. Tab Panduan Genetika terbuka gratis untuk seluruh pengguna (Free maupun Premium).'
+        },
+        {
+          id: 'guide-2',
+          question: 'Bagaimana cara memisahkan materi Leopard Gecko dan AFT?',
+          answer: 'Buka menu Knowledge lalu pilih tab "Panduan Genetika". Di bagian atas halaman, pilih "Jalur Leopard Gecko" atau "Jalur Fat-Tailed (AFT)". Sistem otomatis menyaring materi Umum beserta materi khusus spesies pilihan Anda sehingga contoh gen tidak saling tercampur.'
+        },
+        {
+          id: 'guide-3',
+          question: 'Bagaimana progres belajar dan hasil kuis disimpan?',
+          answer: 'Status materi yang selesai dibaca, materi favorit, dan skor kuis disimpan secara lokal pada perangkat Anda khusus untuk akun yang sedang login (tidak tercampur dengan akun lain di perangkat yang sama). Perlu diperhatikan bahwa progres lokal ini tidak otomatis tersinkronisasi apabila Anda login dari perangkat berbeda.'
         }
       ]
     },

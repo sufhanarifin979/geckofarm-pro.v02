@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, updateDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, increment, deleteField } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, memoryLocalCache, persistentMultipleTabManager, doc, getDoc, setDoc, updateDoc, collection, query, where, onSnapshot, addDoc, deleteDoc, serverTimestamp, increment, deleteField } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { UserProfile } from '../types';
 
@@ -20,34 +20,31 @@ try {
 
 export const auth = getAuth(app);
 
-// Initialize Firestore with robust local offline persistence.
-// We avoid MultipleTabManager in sandboxed iframe or dev-environments to prevent runtime 
-// BroadcastChannel/IndexedDB friction (which causes "FIRESTORE INTERNAL ASSERTION FAILED" crashes).
+// Initialize Firestore with robust local persistence & auto-detect long polling.
+// experimentalAutoDetectLongPolling prevents [code=unavailable] WebChannel connection drop errors
+// in sandboxed iframe previews, corporate proxies, and mobile network transitions.
 let firestoreDb;
+const targetDbId = firebaseConfig?.firestoreDatabaseId || undefined;
+
 try {
-  const isIframe = typeof window !== 'undefined' && window.self !== window.top;
-  
-  if (isIframe) {
-    console.log("Firestore: Running inside an iframe preview. Initializing standard cache for absolute stability.");
-    // In iframe sandbox, standard getFirestore/initializeFirestore is safest.
+  firestoreDb = initializeFirestore(app, {
+    localCache: persistentLocalCache({}),
+    experimentalAutoDetectLongPolling: true,
+  }, targetDbId);
+  console.log("Firestore: Initialized with single-tab persistentLocalCache and auto-detect long polling.");
+} catch (e) {
+  console.warn("Firestore persistent initialization failed, attempting memory cache with auto-detect long polling:", e);
+  try {
+    firestoreDb = initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+      experimentalAutoDetectLongPolling: true,
+    }, targetDbId);
+  } catch (err) {
     try {
-      firestoreDb = getFirestore(app, firebaseConfig?.firestoreDatabaseId || undefined);
+      firestoreDb = getFirestore(app, targetDbId);
     } catch {
       firestoreDb = getFirestore(app);
     }
-  } else {
-    // If not in iframe, initialize with a stable persistent local cache (single-tab, which is highly reliable)
-    firestoreDb = initializeFirestore(app, {
-      localCache: persistentLocalCache({}) // Defaults to single-tab manager, avoiding buggy cross-tab locking
-    }, firebaseConfig?.firestoreDatabaseId || undefined);
-    console.log("Firestore: Initialized with stable single-tab persistentLocalCache!");
-  }
-} catch (e) {
-  console.warn("Firestore persistent initialization failed, falling back to standard memory-only cache:", e);
-  try {
-    firestoreDb = getFirestore(app, firebaseConfig?.firestoreDatabaseId || undefined);
-  } catch (err) {
-    firestoreDb = getFirestore(app);
   }
 }
 export const db = firestoreDb;
@@ -102,6 +99,65 @@ export const setCachedAdminUsers = (data: any[]) => {
 };
 export const clearCachedAdminUsers = () => {
   adminUsersCache = null;
+};
+
+let guidesPublishedCache: any[] | null = null;
+let guidesAdminCache: any[] | null = null;
+let guideBodiesCache: Record<string, any> = {};
+
+export const getCachedGuides = (adminView = false) => adminView ? guidesAdminCache : guidesPublishedCache;
+export const setCachedGuides = (data: any[], adminView = false) => {
+  if (adminView) {
+    guidesAdminCache = data;
+  } else {
+    guidesPublishedCache = data;
+  }
+  try {
+    localStorage.setItem(adminView ? 'cache_genetics_guides_admin' : 'cache_genetics_guides_pub_v6', JSON.stringify(data));
+  } catch (e) {}
+};
+export const getCachedGuideBody = (guideId: string) => guideBodiesCache[guideId] || null;
+export const setCachedGuideBody = (guideId: string, body: any) => {
+  guideBodiesCache[guideId] = body;
+};
+export const clearCachedGuides = (guideId?: string) => {
+  guidesPublishedCache = null;
+  guidesAdminCache = null;
+  if (guideId) {
+    delete guideBodiesCache[guideId];
+  } else {
+    guideBodiesCache = {};
+  }
+  try {
+    localStorage.removeItem('cache_genetics_guides_pub_v6');
+    localStorage.removeItem('cache_genetics_guides_pub_v5');
+    localStorage.removeItem('cache_genetics_guides_pub_v4');
+    localStorage.removeItem('cache_genetics_guides_pub');
+    localStorage.removeItem('cache_genetics_guides_admin');
+  } catch (e) {}
+};
+
+let glossaryPublishedCache: any[] | null = null;
+let glossaryAdminCache: any[] | null = null;
+
+export const getCachedGlossary = (adminView = false) => adminView ? glossaryAdminCache : glossaryPublishedCache;
+export const setCachedGlossary = (data: any[], adminView = false) => {
+  if (adminView) {
+    glossaryAdminCache = data;
+  } else {
+    glossaryPublishedCache = data;
+  }
+  try {
+    localStorage.setItem(adminView ? 'cache_genetics_glossary_admin' : 'cache_genetics_glossary_pub_v1', JSON.stringify(data));
+  } catch (e) {}
+};
+export const clearCachedGlossary = () => {
+  glossaryPublishedCache = null;
+  glossaryAdminCache = null;
+  try {
+    localStorage.removeItem('cache_genetics_glossary_pub_v1');
+    localStorage.removeItem('cache_genetics_glossary_admin');
+  } catch (e) {}
 };
 
 type QuotaListener = (exceeded: boolean) => void;

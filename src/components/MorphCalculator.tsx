@@ -1,5 +1,5 @@
-import { useState, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useRef, useMemo, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Calculator, 
   Dna, 
@@ -20,13 +20,15 @@ import {
   Target,
   Clock,
   Copy,
-  Check
+  Check,
+  GraduationCap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
 import { resolveMorph } from '../lib/morphResolver';
 import { UserProfile } from '../types';
+import { isSubscriptionActive } from '../lib/subscriptionUtils';
 import PremiumModal from './PremiumModal';
 import { 
   VISUAL_TRAITS, 
@@ -105,6 +107,7 @@ interface MorphCalculatorProps {
 }
 
 export default function MorphCalculator({ profile }: MorphCalculatorProps) {
+  const location = useLocation();
   const [activeSpecies, setActiveSpecies] = useState<'Leopard Gecko' | 'African Fat-Tailed Gecko'>('Leopard Gecko');
   const [sire, setSire] = useState<GeneticState>({ visual: [], hets: [], visualTraits: [], patternTraits: [], traitLevels: {} });
   const [dam, setDam] = useState<GeneticState>({ visual: [], hets: [], visualTraits: [], patternTraits: [], traitLevels: {} });
@@ -117,8 +120,20 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
   const [activeTab, setActiveTab] = useState<'prob' | 'ai' | null>(null);
   const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
-
+  const [highlightAiMode, setHighlightAiMode] = useState(false);
   const aiLockRef = useRef(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sp = params.get('species');
+    const mode = params.get('mode');
+    if (sp === 'AFT') {
+      setActiveSpecies('African Fat-Tailed Gecko');
+    } else if (sp === 'LG') {
+      setActiveSpecies('Leopard Gecko');
+    }
+    setHighlightAiMode(mode === 'ai');
+  }, [location.search]);
 
   // Copy analysis text to clipboard
   const handleCopyAnalysis = () => {
@@ -257,7 +272,7 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
     setActiveTab(null);
   };
 
-  const isPremium = profile?.subscription === 'premium' || profile?.email === 'sufhan.arifin979@gmail.com';
+  const isPremium = isSubscriptionActive(profile);
 
   const analyzeWithAI = async () => {
     if (!isPremium) {
@@ -407,14 +422,32 @@ export default function MorphCalculator({ profile }: MorphCalculatorProps) {
             ))}
           </div>
         </div>
-        <Link 
-          to="/knowledge" 
-          className="flex items-center justify-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 hover:bg-emerald-500 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 transition-all shadow-sm border border-slate-200 dark:border-slate-800 hover:border-emerald-400 group h-fit self-end"
-        >
-          <BookOpen className="w-4 h-4 text-emerald-500 group-hover:text-white transition-colors" />
-          Morph Knowledge
-        </Link>
+        <div className="flex flex-wrap items-center gap-2 self-end">
+          <Link 
+            to="/knowledge?tab=guide" 
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-600 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 transition-all shadow-sm border border-emerald-200 dark:border-emerald-500/30 group h-fit"
+          >
+            <GraduationCap className="w-4 h-4 text-emerald-600 group-hover:text-white transition-colors" />
+            Panduan Genetika
+          </Link>
+          <Link 
+            to="/knowledge?tab=encyclopedia" 
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-slate-900 hover:bg-emerald-500 hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 transition-all shadow-sm border border-slate-200 dark:border-slate-800 hover:border-emerald-400 group h-fit"
+          >
+            <BookOpen className="w-4 h-4 text-emerald-500 group-hover:text-white transition-colors" />
+            Ensiklopedia
+          </Link>
+        </div>
       </div>
+
+      {highlightAiMode && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3 text-xs text-emerald-900">
+          <Sparkles size={18} className="text-emerald-600 shrink-0" />
+          <span>
+            Pilih gen untuk <strong>Indukan Jantan (Sire)</strong> dan <strong>Indukan Betina (Dam)</strong> di bawah, lalu klik tombol <strong>Breeder AI Analysis</strong> untuk mengevaluasi proyek pasangan Anda.
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         <ParentCard parent={sire} type="Sire" onClick={() => setActiveParent('sire')} />

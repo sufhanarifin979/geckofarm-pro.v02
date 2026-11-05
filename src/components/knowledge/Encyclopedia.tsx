@@ -242,16 +242,25 @@ function MorphListItem({ morph, onSelect, onOpenCompare, index }: MorphListItemP
 
 interface EncyclopediaProps {
   onNavigateToLab?: (morph?: MorphEntry) => void;
+  initialSpecies?: 'Leopard Gecko' | 'African Fat-Tailed Gecko';
 }
 
-export default function Encyclopedia({ onNavigateToLab }: EncyclopediaProps) {
+export default function Encyclopedia({ onNavigateToLab, initialSpecies }: EncyclopediaProps) {
   const [morphs, setMorphs] = useState<MorphEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterRarity, setFilterRarity] = useState<string>('all');
   const [selectedMorph, setSelectedMorph] = useState<MorphEntry | null>(null);
-  const [activeSpecies, setActiveSpecies] = useState<'Leopard Gecko' | 'African Fat-Tailed Gecko'>('Leopard Gecko');
+  const [activeSpecies, setActiveSpecies] = useState<'Leopard Gecko' | 'African Fat-Tailed Gecko'>(
+    initialSpecies || 'Leopard Gecko'
+  );
+
+  useEffect(() => {
+    if (initialSpecies) {
+      setActiveSpecies(initialSpecies);
+    }
+  }, [initialSpecies]);
 
   // Side-by-Side Compare state
   const [isCompareOpen, setIsCompareOpen] = useState(false);
