@@ -31,7 +31,8 @@ import {
   Loader2,
   ChevronRight,
   Smartphone,
-  Circle
+  Circle,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -41,6 +42,8 @@ import {
   setCachedGuides,
   getCachedGuideBody,
   setCachedGuideBody,
+  getCachedEvaluations,
+  setCachedEvaluations,
   isFirestoreQuotaExceeded
 } from '../../lib/firebase';
 import {
@@ -48,7 +51,9 @@ import {
   GeneticsGuideMeta,
   GeneticsGuideBody,
   GeneticsGuideFull,
-  GuideSpecies
+  GuideSpecies,
+  ClassEvaluationData,
+  GuideLevel
 } from '../../types';
 import { isSubscriptionActive, isSubscriptionExpired, isUserAdmin } from '../../lib/subscriptionUtils';
 import {
@@ -60,6 +65,8 @@ import {
   UserLearningProgress
 } from '../../lib/learningProgress';
 import { STARTER_GENETICS_GUIDES, seedStarterGuidesToFirestore } from './starterGuidesData';
+import { STARTER_CLASS_EVALUATIONS } from './starterEvaluationsData';
+import ClassEvaluationView from './ClassEvaluationView';
 import PremiumModal from '../PremiumModal';
 import GeneticsGlossary from './GeneticsGlossary';
 
@@ -68,6 +75,7 @@ interface GeneticsGuideProps {
   onNavigateToEncyclopedia?: (species?: 'Leopard Gecko' | 'African Fat-Tailed Gecko') => void;
   onNavigateToAdminGuides?: () => void;
   onNavigateToAdminGlossary?: () => void;
+  onNavigateToAdminEvaluations?: () => void;
   initialSpecies?: 'Leopard Gecko' | 'African Fat-Tailed Gecko';
   initialView?: 'lessons' | 'glossary';
 }
@@ -114,6 +122,10 @@ export default function GeneticsGuide({
   const [loadingBody, setLoadingBody] = useState<boolean>(false);
   const [lockedGuidePrompt, setLockedGuidePrompt] = useState<GeneticsGuideMeta | null>(null);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState<boolean>(false);
+
+  // Class Evaluations State
+  const [evaluations, setEvaluations] = useState<ClassEvaluationData[]>(STARTER_CLASS_EVALUATIONS);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<ClassEvaluationData | null>(null);
 
   // Quiz & Glossary Reader State
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
@@ -216,6 +228,25 @@ export default function GeneticsGuide({
         setIsUsingFallback(true);
       }
     } finally {
+      // Load Class Evaluations
+      try {
+        const cachedEvals = getCachedEvaluations(false);
+        if (cachedEvals && cachedEvals.length > 0) {
+          setEvaluations(cachedEvals);
+        } else {
+          const evalSnap = await getDocs(query(collection(db, 'class_evaluations'), where('status', '==', 'published')));
+          if (!evalSnap.empty) {
+            const evalList = evalSnap.docs.map(d => ({ id: d.id, ...d.data() } as ClassEvaluationData));
+            evalList.sort((a, b) => (a.order || 0) - (b.order || 0));
+            setEvaluations(evalList);
+            setCachedEvaluations(evalList, false);
+          } else {
+            setEvaluations(STARTER_CLASS_EVALUATIONS);
+          }
+        }
+      } catch (e) {
+        setEvaluations(STARTER_CLASS_EVALUATIONS);
+      }
       setLoadingCatalog(false);
     }
   };
@@ -1103,23 +1134,26 @@ export default function GeneticsGuide({
   return (
     <div className="space-y-6">
       {/* Top Feature Sub-Tabs: Materi Pembelajaran vs Glosarium */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2.5 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 sm:p-2.5 rounded-3xl border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto">
           <button
             type="button"
             onClick={() => {
               setMainView('lessons');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`min-w-0 flex-1 sm:flex-initial px-3 sm:px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
               mainView === 'lessons'
                 ? 'bg-white text-emerald-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <GraduationCap size={16} />
-            <span>Materi Pembelajaran</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">
+            <GraduationCap size={15} className="shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">Materi Pembelajaran</span>
+              <span className="sm:hidden">Materi</span>
+            </span>
+            <span className="hidden md:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold shrink-0">
               {speciesScopedGuides.length} Materi
             </span>
           </button>
@@ -1130,15 +1164,18 @@ export default function GeneticsGuide({
               setMainView('glossary');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            className={`min-w-0 flex-1 sm:flex-initial px-3 sm:px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
               mainView === 'glossary'
                 ? 'bg-white text-emerald-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <BookOpen size={16} />
-            <span>Glosarium Genetika & Breeding</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">
+            <BookOpen size={15} className="shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">Glosarium Genetika & Breeding</span>
+              <span className="sm:hidden">Glosarium</span>
+            </span>
+            <span className="hidden md:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold shrink-0">
               Kamus Bebas
             </span>
           </button>
@@ -1186,11 +1223,11 @@ export default function GeneticsGuide({
               <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                 <BookOpen size={18} />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className="font-black text-slate-900 block text-xs sm:text-sm">
                   Glosarium Genetika & Breeding Tersedia Bebas
                 </span>
-                <span className="text-slate-600 font-medium">
+                <span className="text-slate-600 font-medium line-clamp-2 sm:line-clamp-none">
                   Pelajari arti istilah seperti Het, Alel, Super Form, Poss Het, Outcross, atau Lethal Gene kapan saja tanpa harus menyelesaikan materi.
                 </span>
               </div>
