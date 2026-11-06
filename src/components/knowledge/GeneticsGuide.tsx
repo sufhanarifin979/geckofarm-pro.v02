@@ -582,6 +582,32 @@ export default function GeneticsGuide({
   }, [selectedGuideBody?.glossaryTerms, speciesMode, glossarySearch]);
 
   // ============================================================================
+  // CLASS EVALUATION VIEW
+  // ============================================================================
+  if (selectedEvaluation) {
+    return (
+      <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
+        <ClassEvaluationView
+          data={selectedEvaluation}
+          profile={profile}
+          onBack={() => {
+            setSelectedEvaluation(null);
+            setProgress(getLearningProgress(profile?.uid));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onNavigateToTier={tier => {
+            setSelectedEvaluation(null);
+            setSelectedLevel(tier);
+            setProgress(getLearningProgress(profile?.uid));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
+        />
+      </div>
+    );
+  }
+
+  // ============================================================================
   // LESSON READER VIEW
   // ============================================================================
   if (selectedGuideMeta) {
@@ -1128,6 +1154,124 @@ export default function GeneticsGuide({
     );
   }
 
+  const renderClassEvaluationCard = (evalData: ClassEvaluationData) => {
+    const isLocked = evalData.accessLevel === 'premium' && !hasActivePremium;
+    const result = progress.evaluationResults?.[evalData.tier];
+    const status = progress.evaluationStatus?.[evalData.tier];
+
+    return (
+      <div
+        key={evalData.id}
+        onClick={() => {
+          if (isLocked) {
+            setLockedGuidePrompt({
+              title: evalData.title,
+              category: 'Rangkuman & Evaluasi Akhir',
+              accessLevel: 'premium',
+              level: evalData.tier,
+              order: 999,
+              species: 'Umum',
+              status: 'published',
+              slug: 'evaluasi-' + evalData.tier.toLowerCase()
+            });
+          } else {
+            setSelectedEvaluation(evalData);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        className={`p-6 sm:p-7 rounded-3xl border transition-all cursor-pointer relative overflow-hidden group shadow-sm hover:shadow-md ${
+          evalData.tier === 'Pemula'
+            ? 'bg-gradient-to-br from-emerald-950 via-slate-900 to-slate-900 text-white border-emerald-500/40 hover:border-emerald-400'
+            : evalData.tier === 'Menengah'
+              ? 'bg-gradient-to-br from-blue-950 via-slate-900 to-slate-900 text-white border-blue-500/40 hover:border-blue-400'
+              : 'bg-gradient-to-br from-purple-950 via-slate-900 to-slate-900 text-white border-purple-500/40 hover:border-purple-400'
+        }`}
+      >
+        <div className="absolute top-0 right-0 -mr-12 -mt-12 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none group-hover:scale-110 transition-transform" />
+
+        <div className="relative z-10 space-y-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/15 flex items-center gap-1.5 shadow-sm">
+                <Award size={13} className="text-amber-400" />
+                <span>Rangkuman & Evaluasi Akhir</span>
+              </span>
+              <span
+                className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                  evalData.tier === 'Pemula'
+                    ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-400/30'
+                    : evalData.tier === 'Menengah'
+                      ? 'bg-blue-500/25 text-blue-300 border border-blue-400/30'
+                      : 'bg-purple-500/25 text-purple-300 border border-purple-400/30'
+                }`}
+              >
+                Kelas {evalData.tier}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {evalData.accessLevel === 'premium' ? (
+                <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-purple-500/25 text-purple-200 border border-purple-400/30 inline-flex items-center gap-1">
+                  {hasActivePremium ? <Sparkles size={11} /> : <Lock size={11} />}
+                  <span>Eksklusif Premium</span>
+                </span>
+              ) : (
+                <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/25 text-emerald-300 border border-emerald-400/30">
+                  Akses Gratis
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <h3 className="text-base sm:text-lg font-black text-white group-hover:text-emerald-300 transition-colors leading-snug">
+              {evalData.title}
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed font-medium line-clamp-2">
+              {evalData.subtitle}
+            </p>
+          </div>
+
+          <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 text-xs text-slate-300 font-medium">
+              <span className="inline-flex items-center gap-1">
+                <BookOpen size={13} className="text-emerald-400" />
+                <span>5 Modul Terangkum</span>
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1">
+                <Award size={13} className="text-amber-400" />
+                <span>10 Soal Evaluasi</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {result ? (
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black uppercase tracking-wider inline-flex items-center gap-1.5">
+                  <CheckCircle2 size={13} className="text-emerald-400" />
+                  <span>Selesai • {result.score}/100 ({result.category})</span>
+                </span>
+              ) : status === 'in_progress' ? (
+                <span className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-black uppercase tracking-wider">
+                  Sedang Dipelajari
+                </span>
+              ) : (
+                <span className="px-3 py-1.5 rounded-xl bg-white/10 text-slate-300 border border-white/15 text-xs font-bold uppercase tracking-wider">
+                  Belum Dimulai
+                </span>
+              )}
+
+              <span className="text-xs font-black text-emerald-400 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                <span>Buka</span>
+                <ChevronRight size={15} />
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ============================================================================
   // CATALOG LEARNING CENTER VIEW
   // ============================================================================
@@ -1135,14 +1279,14 @@ export default function GeneticsGuide({
     <div className="space-y-6">
       {/* Top Feature Sub-Tabs: Materi Pembelajaran vs Glosarium */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2 sm:p-2.5 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-1 sm:gap-1.5 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto">
           <button
             type="button"
             onClick={() => {
               setMainView('lessons');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`min-w-0 flex-1 sm:flex-initial px-3 sm:px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
+            className={`min-w-0 px-2 sm:px-5 py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer ${
               mainView === 'lessons'
                 ? 'bg-white text-emerald-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
@@ -1164,7 +1308,7 @@ export default function GeneticsGuide({
               setMainView('glossary');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className={`min-w-0 flex-1 sm:flex-initial px-3 sm:px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
+            className={`min-w-0 px-2 sm:px-5 py-2.5 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer ${
               mainView === 'glossary'
                 ? 'bg-white text-emerald-600 shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
@@ -1578,68 +1722,88 @@ export default function GeneticsGuide({
           </p>
         </div>
       ) : filteredGuides.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-3xl p-10 sm:p-12 text-center space-y-4">
-          {selectedLevel === 'Lanjutan' && levelCounts.lanjutan === 0 ? (
-            <>
-              <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 mx-auto flex items-center justify-center">
-                <GraduationCap size={28} />
-              </div>
-              <div className="space-y-1.5 max-w-md mx-auto">
-                <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 text-[10px] font-black uppercase tracking-wider">
-                  Tingkat Lanjutan
-                </span>
-                <h3 className="text-base sm:text-lg font-black text-slate-900">
-                  Materi Tingkat Lanjutan Sedang Disiapkan
-                </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Materi tingkat lanjutan yang mencakup studi kasus breeding kompleks, analisis poligenik/line-bred mendalam, dan strategi seleksi holdback akan segera hadir.
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-10 sm:p-12 text-center space-y-4">
+            {selectedLevel === 'Lanjutan' && levelCounts.lanjutan === 0 ? (
+              <>
+                <div className="w-14 h-14 rounded-2xl bg-purple-50 text-purple-600 mx-auto flex items-center justify-center">
+                  <GraduationCap size={28} />
+                </div>
+                <div className="space-y-1.5 max-w-md mx-auto">
+                  <span className="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 text-[10px] font-black uppercase tracking-wider">
+                    Tingkat Lanjutan
+                  </span>
+                  <h3 className="text-base sm:text-lg font-black text-slate-900">
+                    Materi Tingkat Lanjutan Sedang Disiapkan
+                  </h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Materi harian tingkat lanjutan yang mencakup studi kasus breeding kompleks dan analisis poligenik sedang disiapkan. Anda tetap dapat meninjau dan mengerjakan Rangkuman & Evaluasi Akhir Kelas Lanjutan di bawah ini.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLevel('Pemula');
+                      setSelectedCategory('all');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer shadow-sm transition-all"
+                  >
+                    Buka Materi Pemula ({levelCounts.pemula})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLevel('Menengah');
+                      setSelectedCategory('all');
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer shadow-sm transition-all"
+                  >
+                    Buka Materi Menengah ({levelCounts.menengah})
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                  <BookOpen size={22} />
+                </div>
+                <h3 className="text-base font-black text-slate-900">Materi Tidak Ditemukan</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Coba ubah kata kunci pencarian, kategori, tingkat materi, atau matikan filter Favorit.
                 </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedLevel('Pemula');
+                    setSearchQuery('');
                     setSelectedCategory('all');
+                    setSelectedLevel('all');
+                    setShowBookmarksOnly(false);
                   }}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer shadow-sm transition-all"
+                  className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer hover:bg-slate-800 transition-all"
                 >
-                  Buka Materi Pemula ({levelCounts.pemula})
+                  Reset Filter
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedLevel('Menengah');
-                    setSelectedCategory('all');
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider cursor-pointer shadow-sm transition-all"
-                >
-                  Buka Materi Menengah ({levelCounts.menengah})
-                </button>
+              </>
+            )}
+          </div>
+
+          {/* Rangkuman & Evaluasi Akhir Kelas Lanjutan bila filter Lanjutan aktif */}
+          {selectedLevel === 'Lanjutan' && evaluations.find(e => e.tier === 'Lanjutan') && (
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-purple-600" />
+                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                    Bagian Penutup: Rangkuman & Evaluasi Akhir Kelas Lanjutan
+                  </h3>
+                </div>
+                <span className="text-xs font-semibold text-purple-700">
+                  Eksklusif Premium • 10 Soal Evaluasi Terpadu
+                </span>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
-                <BookOpen size={22} />
-              </div>
-              <h3 className="text-base font-black text-slate-900">Materi Tidak Ditemukan</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                Coba ubah kata kunci pencarian, kategori, tingkat materi, atau matikan filter Favorit.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('all');
-                  setSelectedLevel('all');
-                  setShowBookmarksOnly(false);
-                }}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer hover:bg-slate-800 transition-all"
-              >
-                Reset Filter
-              </button>
-            </>
+              {renderClassEvaluationCard(evaluations.find(e => e.tier === 'Lanjutan')!)}
+            </div>
           )}
         </div>
       ) : (
@@ -1791,6 +1955,90 @@ export default function GeneticsGuide({
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* Bagian Penutup Kelas: Rangkuman & Evaluasi Akhir Kelas */}
+      {selectedLevel === 'Pemula' && evaluations.find(e => e.tier === 'Pemula') && (
+        <div className="mt-8 pt-6 border-t border-slate-200 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+            <div className="flex items-center gap-2">
+              <Award className="w-5 h-5 text-emerald-600" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                Bagian Penutup: Rangkuman & Evaluasi Akhir Kelas Pemula
+              </h3>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">
+              Penutup Kelas • Intisari, Kompetensi, Studi Kasus & 10 Soal Evaluasi
+            </span>
+          </div>
+          {renderClassEvaluationCard(evaluations.find(e => e.tier === 'Pemula')!)}
+        </div>
+      )}
+
+      {selectedLevel === 'Menengah' && evaluations.find(e => e.tier === 'Menengah') && (
+        <div className="mt-8 pt-6 border-t border-slate-200 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+            <div className="flex items-center gap-2">
+              <Award className="w-5 h-5 text-blue-600" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                Bagian Penutup: Rangkuman & Evaluasi Akhir Kelas Menengah
+              </h3>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">
+              Penutup Kelas • Intisari, Kompetensi, Studi Kasus & 10 Soal Evaluasi
+            </span>
+          </div>
+          {renderClassEvaluationCard(evaluations.find(e => e.tier === 'Menengah')!)}
+        </div>
+      )}
+
+      {selectedLevel === 'Lanjutan' && filteredGuides.length > 0 && evaluations.find(e => e.tier === 'Lanjutan') && (
+        <div className="mt-8 pt-6 border-t border-slate-200 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+            <div className="flex items-center gap-2">
+              <Award className="w-5 h-5 text-purple-600" />
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">
+                Bagian Penutup: Rangkuman & Evaluasi Akhir Kelas Lanjutan
+              </h3>
+            </div>
+            <span className="text-xs font-semibold text-purple-700">
+              Eksklusif Premium • 10 Soal Evaluasi Terpadu
+            </span>
+          </div>
+          {renderClassEvaluationCard(evaluations.find(e => e.tier === 'Lanjutan')!)}
+        </div>
+      )}
+
+      {selectedLevel === 'all' && evaluations.length > 0 && (
+        <div className="mt-12 pt-8 border-t border-slate-200 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <Award size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  Rangkuman & Evaluasi Akhir Tiap Kelas
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Uji pemahaman komprehensif setelah menyelesaikan 5 materi pokok di setiap jenjang
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-slate-400">
+              Pemula • Menengah • Lanjutan
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {evaluations
+              .filter(e => {
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase();
+                return e.title.toLowerCase().includes(q) || e.subtitle.toLowerCase().includes(q) || e.tier.toLowerCase().includes(q);
+              })
+              .map(evalData => renderClassEvaluationCard(evalData))}
+          </div>
         </div>
       )}
       </>

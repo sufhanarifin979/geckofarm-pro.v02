@@ -278,3 +278,72 @@ export interface GeneticsGlossaryItem {
   updatedAt?: any;
 }
 
+// --- RANGKUMAN & EVALUASI AKHIR KELAS TYPES ---
+export interface ClassEvaluationQuestion {
+  id: string;
+  question: string;
+  options: [string, string, string, string];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface ClassEvaluationModuleSummary {
+  moduleNumber: number;
+  moduleTitle: string;
+  keyPoints: string[];
+}
+
+export interface ClassEvaluationCaseStudy {
+  title: string;
+  scenario: string;
+  geneticBreakdown: string[];
+  keyLesson: string;
+}
+
+export interface ClassEvaluationNextTier {
+  targetTierTitle: string;
+  targetTierLevel?: GuideLevel;
+  description: string;
+  highlightTopics: string[];
+}
+
+export interface ClassEvaluationData {
+  id: string; // 'eval-pemula' | 'eval-menengah' | 'eval-lanjutan'
+  tier: GuideLevel;
+  title: string;
+  subtitle: string;
+  speciesScope: string;
+  accessLevel: GuideAccessLevel;
+  status: GuideStatus;
+  estimatedMinutes?: number;
+  order: number;
+  // A. Intisari Pembelajaran (5 modul)
+  summaryModules: ClassEvaluationModuleSummary[];
+  // B. Kompetensi yang Harus Dikuasai
+  competencies: string[];
+  // C. Studi Kasus Terpadu
+  caseStudy: ClassEvaluationCaseStudy;
+  // D. Evaluasi Akhir (10 pertanyaan)
+  questions: ClassEvaluationQuestion[];
+  // E. Pengantar Kelas Berikutnya / Penutup
+  nextTierIntro: ClassEvaluationNextTier;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export type EvaluationScoreCategory =
+  | 'Sangat Baik'
+  | 'Baik'
+  | 'Cukup'
+  | 'Perlu Mempelajari Kembali Materi';
+
+export interface ClassEvaluationResult {
+  score: number;
+  totalCorrect: number;
+  totalQuestions: number;
+  percentage: number;
+  category: EvaluationScoreCategory;
+  answers: Record<string, number>; // questionId -> selectedIndex
+  completedAt: string;
+}
+

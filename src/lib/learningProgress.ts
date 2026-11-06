@@ -1,3 +1,5 @@
+import { ClassEvaluationResult, EvaluationScoreCategory } from '../types';
+
 export interface LessonQuizResult {
   score: number;
   total: number;
@@ -5,11 +7,16 @@ export interface LessonQuizResult {
   completedAt: string;
 }
 
+export type ClassEvaluationProgressStatus = 'not_started' | 'in_progress' | 'completed';
+
 export interface UserLearningProgress {
   completedGuideIds: string[];
   bookmarkedGuideIds: string[];
   quizResults: Record<string, LessonQuizResult>;
   lastReadGuideId?: string;
+  // Class Evaluation Additions
+  evaluationStatus?: Record<string, ClassEvaluationProgressStatus>; // key: 'Pemula' | 'Menengah' | 'Lanjutan'
+  evaluationResults?: Record<string, ClassEvaluationResult>; // key: 'Pemula' | 'Menengah' | 'Lanjutan'
   updatedAt: string;
 }
 
@@ -25,6 +32,8 @@ function createDefaultProgress(): UserLearningProgress {
     completedGuideIds: [],
     bookmarkedGuideIds: [],
     quizResults: {},
+    evaluationStatus: {},
+    evaluationResults: {},
     updatedAt: new Date().toISOString()
   };
 }
@@ -39,6 +48,8 @@ export function getLearningProgress(uid: string | undefined | null): UserLearnin
       bookmarkedGuideIds: Array.isArray(parsed?.bookmarkedGuideIds) ? parsed.bookmarkedGuideIds : [],
       quizResults: parsed?.quizResults && typeof parsed.quizResults === 'object' ? parsed.quizResults : {},
       lastReadGuideId: typeof parsed?.lastReadGuideId === 'string' ? parsed.lastReadGuideId : undefined,
+      evaluationStatus: parsed?.evaluationStatus && typeof parsed.evaluationStatus === 'object' ? parsed.evaluationStatus : {},
+      evaluationResults: parsed?.evaluationResults && typeof parsed.evaluationResults === 'object' ? parsed.evaluationResults : {},
       updatedAt: typeof parsed?.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString()
     };
   } catch {
@@ -138,4 +149,61 @@ export function resetLearningProgress(uid: string | undefined | null): UserLearn
     localStorage.removeItem(getStorageKey(uid));
   } catch {}
   return empty;
+}
+
+export function calculateEvaluationCategory(score: number): EvaluationScoreCategory {
+  if (score >= 90) return 'Sangat Baik';
+  if (score >= 80) return 'Baik';
+  if (score >= 70) return 'Cukup';
+  return 'Perlu Mempelajari Kembali Materi';
+}
+
+export function saveClassEvaluationResult(
+  uid: string | undefined | null,
+  tier: string,
+  score: number,
+  totalCorrect: number,
+  totalQuestions: number,
+  answers: Record<string, number>
+): UserLearningProgress {
+  const current = getLearningProgress(uid);
+  const percentage = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+  const category = calculateEvaluationCategory(score);
+
+  const newResult: ClassEvaluationResult = {
+    score,
+    totalCorrect,
+    totalQuestions,
+    percentage,
+    category,
+    answers,
+    completedAt: new Date().toISOString()
+  };
+
+  return saveLearningProgress(uid, {
+    ...current,
+    evaluationStatus: {
+      ...(current.evaluationStatus || {}),
+      [tier]: 'completed'
+    },
+    evaluationResults: {
+      ...(current.evaluationResults || {}),
+      [tier]: newResult
+    }
+  });
+}
+
+export function updateClassEvaluationStatus(
+  uid: string | undefined | null,
+  tier: string,
+  status: ClassEvaluationProgressStatus
+): UserLearningProgress {
+  const current = getLearningProgress(uid);
+  return saveLearningProgress(uid, {
+    ...current,
+    evaluationStatus: {
+      ...(current.evaluationStatus || {}),
+      [tier]: status
+    }
+  });
 }

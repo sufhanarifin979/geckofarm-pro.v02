@@ -17,15 +17,17 @@ import {
   Layers,
   BookOpen,
   RotateCw,
-  GraduationCap
+  GraduationCap,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import AdminEncyclopedia from './AdminEncyclopedia';
 import AdminGeneticsGuide from './AdminGeneticsGuide';
 import AdminGeneticsGlossary from './AdminGeneticsGlossary';
+import AdminClassEvaluations from './AdminClassEvaluations';
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'users' | 'encyclopedia' | 'guides' | 'glossary'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'encyclopedia' | 'guides' | 'glossary' | 'evaluations'>('users');
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -305,6 +307,15 @@ export default function AdminPanel() {
              <BookOpen size={14} />
              Glosarium
            </button>
+           <button 
+             onClick={() => setActiveTab('evaluations')}
+             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer ${
+               activeTab === 'evaluations' ? 'bg-white dark:bg-slate-800 text-emerald-600 shadow-sm' : 'text-slate-400'
+             }`}
+           >
+             <Award size={14} />
+             Evaluasi Akhir
+           </button>
         </div>
       </div>
 
@@ -474,7 +485,7 @@ export default function AdminPanel() {
           >
             <AdminGeneticsGuide />
           </motion.div>
-        ) : (
+        ) : activeTab === 'glossary' ? (
           <motion.div 
             key="glossary-tab"
             initial={{ opacity: 0, y: 10 }}
@@ -482,6 +493,15 @@ export default function AdminPanel() {
             exit={{ opacity: 0, y: -10 }}
           >
             <AdminGeneticsGlossary />
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="evaluations-tab"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminClassEvaluations />
           </motion.div>
         )}
       </AnimatePresence>

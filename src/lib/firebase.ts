@@ -160,6 +160,29 @@ export const clearCachedGlossary = () => {
   } catch (e) {}
 };
 
+let evaluationsPublishedCache: any[] | null = null;
+let evaluationsAdminCache: any[] | null = null;
+
+export const getCachedEvaluations = (adminView = false) => adminView ? evaluationsAdminCache : evaluationsPublishedCache;
+export const setCachedEvaluations = (data: any[], adminView = false) => {
+  if (adminView) {
+    evaluationsAdminCache = data;
+  } else {
+    evaluationsPublishedCache = data;
+  }
+  try {
+    localStorage.setItem(adminView ? 'cache_class_evals_admin' : 'cache_class_evals_pub_v1', JSON.stringify(data));
+  } catch (e) {}
+};
+export const clearCachedEvaluations = () => {
+  evaluationsPublishedCache = null;
+  evaluationsAdminCache = null;
+  try {
+    localStorage.removeItem('cache_class_evals_pub_v1');
+    localStorage.removeItem('cache_class_evals_admin');
+  } catch (e) {}
+};
+
 type QuotaListener = (exceeded: boolean) => void;
 const quotaListeners = new Set<QuotaListener>();
 
