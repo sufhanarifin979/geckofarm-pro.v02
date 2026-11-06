@@ -460,52 +460,52 @@ export const STARTER_CLASS_EVALUATIONS: ClassEvaluationData[] = [
     summaryModules: [
       {
         moduleNumber: 1,
-        moduleTitle: 'Arsitektur Proyek Breeding Multi-Generasi (F1–F3)',
+        moduleTitle: 'Interaksi Gen dan Pembentukan Combo Morph',
         keyPoints: [
-          'Proyek combo kompleks (seperti Diablo Blanco atau Whiteout Oreo Patternless) memerlukan perencanaan 2–3 generasi (F1 hingga F3).',
-          'F1 fokus pada pembuatan Double/Triple Het; F2 dan F3 fokus pada perpaduan visual dan penguncian karakter yang diinginkan.',
-          'Hitung kebutuhan kandang pembesaran dan rasio anakan sampingan sebelum memulai proyek multi-tahun.',
-          'Dokumentasikan pohon silsilah (pedigree) secara digital dan konsisten untuk setiap clutch yang menetas.'
+          'Kombinasi gen adalah kehadiran beberapa gen dalam satu individu, sedangkan interaksi gen terjadi saat suatu gen memengaruhi, menutupi, atau memperkuat ekspresi gen lain.',
+          'Kategori interaksi mencakup epistatis (misal Blizzard menutupi corak lain), modifikasi pigmen melanin/pteridin, dan efek aditif poligenik.',
+          'Combo morph harus dibedakan antara mutasi independen (misal Mack Snow + Tremper Albino) dan interaksi langsung antar lokus.',
+          'Identifikasi visual combo morph wajib didukung oleh pemahaman genotipe indukan untuk menghindari mislabeling komersial.'
         ]
       },
       {
         moduleNumber: 2,
-        moduleTitle: 'Seleksi Poligenik Tingkat Lanjut & Stacking Mutasi',
+        moduleTitle: 'Analisis Genetik Multi-Gene dan Persilangan Kompleks',
         keyPoints: [
-          'Menggabungkan sifat poligenik (seperti Tangerine pekat) ke dalam mutasi resesif membutuhkan seleksi visual intensif pada setiap generasi carrier.',
-          'Prinsip "Stacking": menumpuk gen pencerah atau pemekat warna harus mempertimbangkan interaksi pigmen (melanin, pteridin, xantin).',
-          'Hati-hati dengan "Gen Overload": menumpuk terlalu banyak mutasi resesif sering kali mengaburkan keindahan corak dan menurunkan daya tahan hidup.',
-          'Pilihlah mutasi yang saling melengkapi (complementary) bukan yang saling meniadakan ekspresi visual.'
+          'Persilangan multi-gene melibatkan dua atau lebih lokus independen yang diwariskan secara terpisah (Hukum Asortasi Bebas Mendel).',
+          'Probabilitas anakan multi-locus dihitung dengan mengalikan peluang pada masing-masing lokus (Rule of Multiplication).',
+          'Penggunaan diagram alur bertingkat atau kalkulator genetika membantu memetakan rasio fenotipe dan genotipe yang kompleks.',
+          'Hindari jebakan Possible Het berantai: kepastian genotipe menurun drastis pada anakan dari indukan multi-carrier yang belum terbukti.'
         ]
       },
       {
         moduleNumber: 3,
-        moduleTitle: 'Strategi Pemilihan Holdback & Scoring Anatomi',
+        moduleTitle: 'Risiko Genetik, Mutasi, dan Pertimbangan Kesehatan',
         keyPoints: [
-          'Holdback adalah anakan terbaik yang tidak dijual melainkan disimpan sebagai calon indukan generasi penerus fasilitas.',
-          'Gunakan sistem skor objektif: 40% Kualitas Fenotipe (warna/pola), 30% Struktur Anatomi (tulang kepala, punggung, ekor), dan 30% Nilai Genotipe.',
-          'Jangan menyimpan holdback yang memiliki cacat fisik atau kebiasaan makan buruk meskipun membawa genotipe langka.',
-          'Evaluasi perkembangan anakan pada usia 1 bulan, 3 bulan, dan 6 bulan sebelum menetapkan status holdback final.'
+          'Tidak semua mutasi genetika bersifat netral; beberapa mutasi terkait langsung dengan kelainan neurologis, sindrom pleiotropik, atau kondisi letal.',
+          'Mutasi letal (seperti Super Whiteout pada AFT atau Super Enigma pada LG) menyebabkan kematian embrio di dalam telur.',
+          'Sindrom neurologis (seperti Enigma Syndrome pada LG) memerlukan evaluasi etika ketat: hindari membiakkan individu bergejala parah.',
+          'Breeder beretika memprioritaskan kesehatan, daya tahan, dan kesejahteraan hewan di atas nilai estetika atau nilai jual semata.'
         ]
       },
       {
         moduleNumber: 4,
-        moduleTitle: 'Manajemen Inbreeding, Line-Breeding & Outcrossing Terencana',
+        moduleTitle: 'Line-Breeding, Polygenic Selection, dan Pengembangan Bloodline',
         keyPoints: [
-          'Line-breeding (mengawinkan kerabat jauh dengan kakek/nenek unggul) efektif mengunci sifat poligenik yang diinginkan.',
-          'Inbreeding berlebihan (mengawinkan saudara sekandung terus-menerus) memicu inbreeding depression: penurunan daya tetas, imun lemah, dan kemandulan.',
-          'Outcross terencana: memasukkan darah segar gecko Normal liar atau strain murni lain setiap 3–4 generasi untuk menyegarkan vitalitas genetik.',
-          'Keseimbangan antara seleksi bentuk dan kesegaran genetik adalah kunci umur panjang fasilitas breeding.'
+          'Line-breeding memanfaatkan hubungan kekerabatan terarah untuk mengunci dan menstabilkan karakteristik unggul dalam satu garis keturunan.',
+          'Sifat poligenik (seperti intensitas warna Tangerine) menampilkan variasi kontinu dan dipengaruhi oleh faktor lingkungan serta akumulasi alel minor.',
+          'Perbedaan tajam antara selective breeding (memilih sifat tanpa batasan silsilah), line-breeding (kekerabatan terarah), dan inbreeding tak terkontrol.',
+          'Outcrossing berkala wajib disisipkan setiap 3–4 generasi untuk memutus inbreeding depression, memulihkan fertilitas, dan menjaga daya tetas telur.'
         ]
       },
       {
         moduleNumber: 5,
-        moduleTitle: 'Etika Pemuliaan Profesional, Standar Silsilah & Mitigasi Risiko',
+        moduleTitle: 'Strategi Proyek Breeding dan Evaluasi Hasil Genetik',
         keyPoints: [
-          'Transparansi mutlak: label penjualan wajib mencantumkan status Het yang sebenarnya tanpa manipulasi persentase.',
-          'Tolak memproduksi atau memasarkan mutasi yang menurunkan kualitas hidup satwa (contoh: Lemon Frost dengan tumor ganas atau Enigma bergejala parah).',
-          'Sediakan garansi genetik dan panduan perawatan bagi adopsi/pembeli anakan.',
-          'Breeder profesional adalah penjaga kelestarian dan martabat dunia reptil di mata masyarakat luas.'
+          'Perencanaan proyek breeding modern dibagi menjadi 3 target: Genetic Project (mutasi Mendelian), Phenotype Project (sifat poligenik), atau Bloodline Development.',
+          'Evaluasi indukan pra-pairing wajib memverifikasi 5 pilar: genotipe pasti, kualitas fenotipe, riwayat silsilah, status kesehatan prima, dan kematangan usia.',
+          'Expected outcome adalah probabilitas statistik jangka panjang, sedangkan actual outcome pada clutch kecil selalu mengalami fluktuasi deviasi sampling.',
+          'Penerapan timeline 6 tahap, tabel 7 indikator evaluasi objektif, dan pencatatan master sheet 15 parameter menjamin integritas dan keberhasilan proyek.'
         ]
       }
     ],

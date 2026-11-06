@@ -179,7 +179,7 @@ export default function GeneticsGuide({
       }
 
       try {
-        const localRaw = localStorage.getItem('cache_genetics_guides_pub_v6');
+        const localRaw = localStorage.getItem('cache_genetics_guides_pub_v11');
         if (localRaw) {
           const parsed = JSON.parse(localRaw);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -199,10 +199,16 @@ export default function GeneticsGuide({
       if (snap.docs.length > 0) {
         const fetched = snap.docs
           .map(d => ({ id: d.id, ...d.data() } as GeneticsGuideMeta))
-          .filter(g => g.category !== 'Glosarium' && g.id !== 'guide-07-glosarium')
-          .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || (a.title || '').localeCompare(b.title || ''));
-        setGuides(fetched);
-        setCachedGuides(fetched, false);
+          .filter(g => g.category !== 'Glosarium' && g.id !== 'guide-07-glosarium');
+        
+        // Merge any starter guides not yet present in Firestore so newly added curriculum items appear immediately
+        const fetchedIds = new Set(fetched.map(f => f.id));
+        const missingStarters = starterMetaList.filter(s => !fetchedIds.has(s.id));
+        const combined = [...fetched, ...missingStarters].sort(
+          (a, b) => (a.order ?? 999) - (b.order ?? 999) || (a.title || '').localeCompare(b.title || '')
+        );
+        setGuides(combined);
+        setCachedGuides(combined, false);
         setIsUsingFallback(false);
       } else {
         // Check if Admin intentionally unpublished everything vs brand-new empty DB
@@ -423,7 +429,7 @@ export default function GeneticsGuide({
       } else {
         // Graceful fallback if starter ID exists in starter data
         const starter = STARTER_GENETICS_GUIDES.find(s => s.id === meta.id);
-        if (starter && meta.accessLevel === 'free') {
+        if (starter && (meta.accessLevel === 'free' || hasActivePremium)) {
           setSelectedGuideBody({
             guideId: meta.id,
             status: meta.status,
@@ -1834,7 +1840,13 @@ export default function GeneticsGuide({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider">
-                        Materi {String(guide.order || idx + 1).padStart(2, '0')}
+                        Materi {String(
+                          guide.level === 'Menengah'
+                            ? (guide.order ?? 0) > 5 ? (guide.order ?? 0) - 5 : (guide.order ?? idx + 1)
+                            : guide.level === 'Lanjutan'
+                              ? (guide.order ?? 0) > 10 ? (guide.order ?? 0) - 10 : (guide.order ?? idx + 1)
+                              : (guide.order || idx + 1)
+                        ).padStart(2, '0')}
                       </span>
                       <span
                         className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
