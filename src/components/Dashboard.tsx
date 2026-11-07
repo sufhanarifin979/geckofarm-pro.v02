@@ -12,12 +12,15 @@ import {
   Flame,
   Crown
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import PremiumModal from './PremiumModal';
 import Analytics from './Analytics';
+import AllProBreedersModal from './AllProBreedersModal';
+import { ProBreeder } from '../types';
+import { getProBreedersList } from '../data/proBreedersData';
 
 import { useGeckos } from '../GeckoProvider';
 import { useNotifications } from '../context/NotificationContext';
@@ -38,6 +41,16 @@ export default function Dashboard({ profile }: DashboardProps) {
   });
   const [loading, setLoading] = useState(true);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [isProBreedersModalOpen, setIsProBreedersModalOpen] = useState(false);
+  const [shuffledBreeders, setShuffledBreeders] = useState<ProBreeder[]>([]);
+
+  const allProBreeders = useMemo(() => getProBreedersList(profile), [profile]);
+
+  useEffect(() => {
+    const list = getProBreedersList(profile);
+    const shuffled = [...list].sort(() => 0.5 - Math.random());
+    setShuffledBreeders(shuffled);
+  }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
@@ -310,6 +323,63 @@ export default function Dashboard({ profile }: DashboardProps) {
             </div>
           </div>
  
+          {/* GECKOFARM PRO BREEDERS SHOWCASE (FAUNARY STYLE WITH PROMINENT CIRCULAR LOGOS) */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm text-center">
+            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              GeckoFarm Pro Breeders
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5 mb-7 max-w-md mx-auto leading-relaxed">
+              Breeder aktif terverifikasi saat ini, Setiap dukungan memiliki peran dalam ekosistem GeckoFarm Pro.
+            </p>
+
+            {/* Grid of 10 Large Circular Logos (2 rows of 5) */}
+            <div className="grid grid-cols-5 gap-3 sm:gap-5 max-w-md mx-auto justify-items-center">
+              {shuffledBreeders.slice(0, 10).map((b, idx) => (
+                <div
+                  key={b.id || idx}
+                  onClick={() => setIsProBreedersModalOpen(true)}
+                  className="group flex flex-col items-center cursor-pointer"
+                  title={b.farmName}
+                >
+                  <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full overflow-hidden shadow-sm hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-slate-100/90 bg-white flex items-center justify-center p-0.5">
+                    {b.farmPhotoUrl ? (
+                      <img
+                        src={b.farmPhotoUrl}
+                        alt={b.farmName}
+                        className="w-full h-full object-cover rounded-full"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `<span class="font-black text-emerald-800 text-sm uppercase">${b.farmName.substring(0, 2)}</span>`;
+                          }
+                        }}
+                      />
+                    ) : (
+                      <span className="font-black text-emerald-800 text-sm uppercase">
+                        {b.farmName.substring(0, 2)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Outlined Pill Button (Matching Faunary style) */}
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={() => setIsProBreedersModalOpen(true)}
+                className="px-8 py-2.5 rounded-full border-2 border-emerald-700/80 hover:bg-emerald-50 active:scale-95 text-emerald-800 text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center gap-2"
+              >
+                <span>Lihat user pro lainnya</span>
+                <span className="text-sm">→</span>
+              </button>
+            </div>
+          </div>
+
+          {/* SCALE YOUR BUSINESS BANNER */}
           <div className="bg-emerald-600 rounded-2xl p-6 shadow-lg shadow-emerald-600/20 text-white flex flex-col gap-4">
             <div>
               <h3 className="text-[10px] font-black uppercase tracking-widest mb-1">Scale your business</h3>
@@ -334,6 +404,12 @@ export default function Dashboard({ profile }: DashboardProps) {
         isOpen={isPremiumModalOpen} 
         onClose={() => setIsPremiumModalOpen(false)} 
         profile={profile} 
+      />
+
+      <AllProBreedersModal
+        isOpen={isProBreedersModalOpen}
+        onClose={() => setIsProBreedersModalOpen(false)}
+        breeders={allProBreeders}
       />
     </div>
   );

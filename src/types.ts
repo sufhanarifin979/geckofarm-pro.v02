@@ -347,3 +347,11 @@ export interface ClassEvaluationResult {
   completedAt: string;
 }
 
+export interface ProBreeder {
+  id: string;
+  farmName: string;
+  farmPhotoUrl?: string;
+  isVerified?: boolean;
+}
+
+

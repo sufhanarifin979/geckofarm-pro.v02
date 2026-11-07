@@ -27,12 +27,12 @@ export const STARTER_GENETICS_GUIDES: GeneticsGuideFull[] = [
     id: 'guide-01-dasar-genetika',
     slug: 'dasar-genetika-gen-alel-genotipe-fenotipe',
     title: '1. Dasar Genetika: Gen, Alel, Genotipe & Fenotipe',
-    subtitle: 'Memahami fondasi DNA, perbedaan tampilan fisik (Fenotipe) dan susunan genetik tersembunyi (Genotipe), serta konsep Homozygous vs Het.',
+    subtitle: 'Memahami fondasi DNA, perbedaan tampilan fisik (Fenotipe) dan susunan genetik (Genotipe), serta konsep Homozygous dan Heterozygous.',
     category: 'Dasar Genetika',
     species: 'Umum',
     level: 'Pemula',
     order: 1,
-    readTimeMinutes: 4,
+    readTimeMinutes: 5,
     status: 'published',
     accessLevel: 'free',
     ctaType: 'encyclopedia',
@@ -41,69 +41,174 @@ export const STARTER_GENETICS_GUIDES: GeneticsGuideFull[] = [
     hasGlossary: false,
     content: `## Mengapa Belajar Dasar Genetika Itu Penting?
 
-Sebelum menyilangkan indukan reptil atau menggunakan kalkulator genetik, setiap penghobi dan calon breeder wajib memahami bagaimana sifat fisik diturunkan dari induk ke anakannya.
+Sebelum melakukan pairing atau menggunakan kalkulator genetik, setiap penghobi dan calon breeder perlu memahami bagaimana sifat diwariskan dari induk kepada anakannya.
 
-Bayangkan DNA reptil seperti **buku resep masakan** yang menentukan warna kulit, corak punggung, hingga warna mata. Setiap anakan selalu menerima **setengah resep dari induk Jantan (Sire)** dan **setengah resep dari induk Betina (Dam)**.
+Bayangkan DNA reptil seperti sebuah buku instruksi biologis yang membawa informasi untuk membentuk dan menjalankan tubuh. Informasi genetik ini berperan dalam berbagai karakteristik, termasuk pigmentasi, warna, dan pola tubuh.
 
----
+Pada setiap lokus gen autosomal, seekor gecko umumnya memiliki dua salinan alel: satu diwariskan dari induk jantan (Sire) dan satu dari induk betina (Dam).
 
-### 1. Gen dan Alel (Pasangan Sifat)
-* **Gen** adalah bagian spesifik pada DNA yang mengatur satu sifat tertentu (misalnya produksi pigmen hitam atau pola garis).
-* **Alel (Allele)** adalah variasi dari gen tersebut yang selalu **berpasangan (2 salinan)**: 1 salinan dari bapak (*Sire*) dan 1 salinan dari ibu (*Dam*).
+Penting untuk diingat bahwa tidak semua karakteristik gecko hanya dikendalikan oleh satu gen. Beberapa sifat dapat dipengaruhi oleh interaksi banyak gen sekaligus.
 
 ---
 
-### 2. Fenotipe vs Genotipe
-Dua ekor gecko bisa terlihat **100% identik dari luar**, tetapi menghasilkan anakan yang sangat berbeda saat dikawinkan! Di sinilah perbedaan antara Fenotipe dan Genotipe:
-* **Fenotipe (Tampilan Luar / Visual):** Apa yang bisa Anda lihat langsung dengan mata—warna tubuh, pola bintik, atau warna mata.
-* **Genotipe (Isi Genetik Lengkap):** Seluruh kode genetik yang tersimpan di dalam DNA gecko, termasuk sifat **tersembunyi (*Het*)** yang tidak tampak di kulit luarnya.
+## 1. Gen dan Alel (Pasangan Sifat)
+
+**Gen (Gene)** adalah bagian dari DNA yang membawa informasi untuk menghasilkan produk fungsional, seperti protein, yang berperan dalam berbagai proses biologis.
+
+Variasi gen tertentu dapat memengaruhi karakteristik gecko, seperti pigmentasi, warna, atau pola tubuh. Namun, tidak semua karakteristik hanya dikendalikan oleh satu gen.
+
+**Alel (Allele)** adalah variasi dari suatu gen pada lokasi tertentu di kromosom yang disebut lokus (*locus*).
+
+Pada setiap lokus gen autosomal, gecko umumnya memiliki dua alel: satu diwariskan dari induk jantan (Sire) dan satu dari induk betina (Dam).
+
+Kedua alel tersebut dapat sama atau berbeda, dan kombinasi keduanya berperan dalam menentukan bagaimana suatu sifat diwariskan dan diekspresikan.
 
 ---
 
-### 3. Homozygous vs Heterozygous (Het)
-Karena setiap gen memiliki 2 salinan alel, terdapat 3 kondisi utama:
-1. **Wild Type / Normal (Tanpa Mutasi):** Kedua salinan gen adalah normal.
-2. **Heterozygous (disingkat "Het"):** Memiliki **1 salinan mutasi** dan **1 salinan normal**. Pada sifat resesif, gecko terlihat normal dari luar tetapi **membawa (carrier)** gen mutasi tersebut untuk diturunkan ke anaknya.
-3. **Homozygous (2 Salinan Sama):** Memiliki **2 salinan mutasi penuh** (1 dari Sire + 1 dari Dam), sehingga sifat resesif muncul secara **Visual** pada tubuh gecko.`,
-    exampleTitle: 'Contoh Sederhana: "Terlihat Normal, Tapi Membawa Gen"',
-    exampleContent: `Bayangkan seekor gecko bernama "Bima" yang tampilan fisiknya tampak Normal (berbintik biasa). Namun, induk Bima dulunya adalah morph resesif visual.
-• Fenotipe Bima = Normal (tampilan fisik biasa).
-• Genotipe Bima = Normal 100% Het Recessive (membawa 1 salinan gen tersembunyi).
-Jika Bima dikawinkan dengan pasangan yang juga membawa gen yang sama, anak-anaknya berpeluang lahir dengan warna mutasi Visual!`,
+## 2. Fenotipe vs Genotipe
+
+Dua ekor gecko dapat terlihat sangat mirip dari luar, tetapi memiliki susunan genetik yang berbeda. Perbedaan ini penting dalam kegiatan breeding.
+
+**Fenotipe (Phenotype / Tampilan Fisik)** adalah karakteristik yang dapat diamati pada gecko, seperti warna tubuh, pola, pigmentasi, dan warna mata.
+
+Fenotipe terbentuk melalui pengaruh genetik dan dapat dipengaruhi pula oleh faktor lingkungan.
+
+**Genotipe (Genotype / Susunan Genetik)** adalah susunan alel yang dimiliki individu pada satu atau lebih lokus genetik.
+
+Dalam breeding, genotipe membantu breeder memahami sifat yang tampak secara visual maupun sifat resesif yang tidak terlihat dari penampilan luar.
+
+Sebagai contoh, dua gecko yang terlihat Normal belum tentu memiliki status genetik yang sama. Salah satunya mungkin membawa satu salinan alel resesif (Het), sedangkan yang lainnya tidak membawa alel tersebut.
+
+---
+
+## 3. Homozygous vs Heterozygous (Het)
+
+Pada suatu lokus gen autosomal, terdapat tiga kemungkinan kombinasi alel dalam model sederhana satu gen resesif.
+
+Untuk memudahkan pemahaman, kita gunakan notasi berikut:
+* **A** = alel normal.
+* **a** = alel resesif.
+
+### A. Homozygous Normal (AA)
+Memiliki dua salinan alel normal yang sama pada lokus yang sedang dibahas.
+
+Dalam contoh sifat resesif sederhana, gecko dengan genotipe AA tidak membawa alel resesif tersebut.
+
+### B. Heterozygous (Aa)
+Memiliki satu alel normal (A) dan satu alel resesif (a).
+
+Pada pola pewarisan resesif sederhana, satu alel normal umumnya cukup untuk menutupi ekspresi visual alel resesif.
+
+Gecko ini biasanya terlihat Normal, tetapi membawa satu salinan alel resesif yang dapat diwariskan kepada anakannya.
+
+Dalam dunia breeding, kondisi ini umum disebut **Het (Heterozygous)** atau carrier.
+
+### C. Homozygous Recessive (aa)
+Memiliki dua salinan alel resesif yang sama pada lokus tersebut.
+
+Pada pola pewarisan resesif sederhana, kondisi ini menyebabkan sifat mutasi muncul secara visual.
+
+Gecko dengan kondisi ini sering disebut **Visual Recessive**.
+
+> **Catatan penting:** Homozygous berarti memiliki dua alel yang sama, bukan selalu dua alel mutasi. Contohnya, AA juga merupakan kondisi Homozygous, yaitu Homozygous Normal.
+> 
+> Notasi AA, Aa, dan aa dalam materi ini merupakan model sederhana untuk menjelaskan satu lokus dengan pola pewarisan resesif. Notasi tersebut bukan notasi universal untuk seluruh gen dan morph Leopard Gecko.
+
+---
+
+## 4. Memahami Wild Type dan Normal
+
+Istilah Wild Type merujuk pada bentuk atau variasi yang dianggap sebagai kondisi alami atau acuan pada suatu populasi.
+
+Sementara itu, istilah Homozygous Normal menjelaskan kondisi genetik dengan dua alel normal yang sama pada lokus tertentu.
+
+Dalam percakapan breeding, istilah Normal sering digunakan untuk menyebut gecko yang tidak menunjukkan visual suatu morph tertentu. Namun, penampilan Normal tidak otomatis membuktikan bahwa gecko tersebut bebas dari seluruh gen resesif.
+
+Karena itu, breeder perlu membedakan antara penampilan visual dan status genetik yang sudah diketahui atau dibuktikan.
+
+---
+
+## 5. Contoh Sederhana: Terlihat Normal, tetapi Membawa Gen
+
+Bayangkan seekor gecko bernama Bima.
+
+Bima merupakan hasil pairing:
+* **Induk jantan:** Tremper Albino Visual (aa).
+* **Induk betina:** Normal Non-Carrier (AA), dengan status genetik yang diketahui dan dapat dipercaya.
+
+Persilangannya:
+$$\text{aa} \times \text{AA} \rightarrow 100\% \text{ Aa}$$
+
+Artinya, seluruh anakan memiliki satu alel Tremper Albino dari induk visual dan satu alel normal dari induk non-carrier.
+
+Hasilnya:
+* **Fenotipe:** Normal, tidak menunjukkan visual Tremper Albino.
+* **Genotipe:** 100% Het Tremper Albino.
+* **Status:** Seluruh anakan membawa satu salinan alel Tremper Albino.
+
+Jika Bima kelak dikawinkan dengan gecko lain yang juga Het Tremper Albino, keturunannya memiliki peluang:
+* **25%** Tremper Albino Visual.
+* **50%** Het Tremper Albino.
+* **25%** Homozygous Normal.
+
+Angka tersebut merupakan probabilitas genetik untuk setiap anakan, bukan jaminan bahwa setiap clutch akan selalu menghasilkan rasio persis seperti itu.
+
+> **Penting:** Status 100% Het hanya dapat disimpulkan apabila genotipe kedua induk diketahui. Memiliki salah satu induk visual resesif saja belum cukup untuk memastikan semua anakannya menjadi Het.
+
+---
+
+## 6. Kesalahan Umum Pemula
+
+**Menganggap semua gecko yang terlihat Normal pasti tidak membawa gen resesif.**
+
+Ini merupakan kesalahan yang sering terjadi.
+
+Pada pola pewarisan resesif sederhana, gecko Het umumnya tidak menunjukkan sifat mutasi tersebut secara visual.
+
+Status Het tidak dapat dipastikan hanya dengan melihat warna, corak, atau penampilan fisik. Status tersebut perlu didukung oleh catatan silsilah (*Lineage*), riwayat pairing, atau pembuktian genetik melalui hasil breeding yang terkontrol.
+
+Karena itu, pencatatan indukan yang rapi dan jujur sangat penting dalam breeding.`,
+    exampleTitle: 'Contoh Sederhana: Terlihat Normal, tetapi Membawa Gen',
+    exampleContent: `Bima hasil pairing Jantan Tremper Albino Visual (aa) × Betina Normal Non-Carrier (AA).
+Persilangan: aa × AA → 100% Aa.
+• Fenotipe: Normal, tidak menunjukkan visual Tremper Albino.
+• Genotipe: 100% Het Tremper Albino (seluruh anakan membawa satu salinan alel Tremper Albino).
+Jika Bima dikawinkan dengan sesama Het Tremper Albino, peluang tiap anakan: 25% Tremper Albino Visual, 50% Het Tremper Albino, 25% Homozygous Normal.`,
     warningTitle: 'Kesalahan Umum Pemula',
-    warningContent: `Sifat "Het" (Heterozygous pada gen resesif) TIDAK BISA dilihat dengan mata telanjang dari corak kulit atau mata. Status Het hanya bisa diketahui dari catatan silsilah induk (Lineage) yang jujur dan rapi.`,
+    warningContent: `Menganggap semua gecko yang terlihat Normal pasti tidak membawa gen resesif adalah kekeliruan umum. Pada pola pewarisan resesif sederhana, gecko Het umumnya tidak menunjukkan sifat mutasi tersebut secara visual. Status Het perlu didukung oleh catatan silsilah (Lineage), riwayat pairing, atau pembuktian genetik melalui hasil breeding yang terkontrol.`,
     summaryPoints: [
-      'Setiap gecko mewarisi 2 salinan alel untuk tiap gen: 1 dari induk Jantan (Sire) dan 1 dari induk Betina (Dam).',
-      'Fenotipe adalah tampilan visual luar, sedangkan Genotipe adalah isi genetik lengkap termasuk gen tersembunyi.',
-      'Homozygous berarti memiliki 2 salinan gen yang sama, sedangkan Heterozygous (Het) berarti membawa 1 salinan gen berbeda.',
-      'Pencatatan silsilah induk di Registry sangat penting karena sifat Het tidak terlihat secara fisik.'
+      'Pada setiap lokus gen autosomal, gecko umumnya memiliki dua alel: satu diwariskan dari induk jantan dan satu dari induk betina.',
+      'Fenotipe adalah karakteristik yang dapat diamati, sedangkan Genotipe adalah susunan alel yang dimiliki pada lokus tertentu.',
+      'Homozygous berarti memiliki dua alel yang sama, sedangkan Heterozygous berarti memiliki dua alel yang berbeda.',
+      'Pada pola pewarisan resesif sederhana, gecko dengan satu alel normal dan satu alel resesif umumnya terlihat Normal, tetapi dapat mewariskan alel resesif tersebut.',
+      'Catatan Lineage dan riwayat pairing sangat penting untuk mengetahui serta membuktikan status genetik indukan.'
     ],
     quiz: [
       {
         id: 'q1-1',
-        question: 'Apa sebutan untuk tampilan fisik warna dan corak gecko yang dapat dilihat langsung oleh mata?',
+        question: 'Apa sebutan untuk tampilan fisik warna dan corak gecko yang dapat diamati secara langsung?',
         options: ['Genotipe', 'Fenotipe', 'Heterozygous', 'Lokus'],
         correctIndex: 1,
-        explanation: 'Fenotipe merujuk pada sifat fisik/visual luar yang tampak oleh mata, sedangkan Genotipe adalah susunan genetik di dalam DNA.'
+        explanation: 'Fenotipe adalah karakteristik yang dapat diamati pada gecko, seperti warna tubuh, pola, pigmentasi, dan warna mata.'
       },
       {
         id: 'q1-2',
-        question: 'Dari mana seekor anakan gecko mendapatkan pasangan alel (2 salinan gen) di dalam tubuhnya?',
+        question: 'Dari mana seekor anakan gecko mendapatkan dua salinan alel pada suatu lokus gen autosomal?',
         options: [
           '100% dari induk betina (Dam)',
           '100% dari suhu inkubator',
-          '1 salinan dari induk jantan (Sire) dan 1 salinan dari induk betina (Dam)',
+          'Satu alel dari induk jantan (Sire) dan satu alel dari induk betina (Dam)',
           'Muncul secara acak saat menetas'
         ],
         correctIndex: 2,
-        explanation: 'Setiap lokus gen terdiri dari sepasang alel: tepat 1 salinan diwariskan oleh Sire dan 1 salinan diwariskan oleh Dam.'
+        explanation: 'Pada setiap lokus gen autosomal, gecko umumnya memiliki dua alel: satu diwariskan dari induk jantan (Sire) dan satu dari induk betina (Dam).'
       },
       {
         id: 'q1-3',
-        question: 'Jika seekor gecko memiliki 1 salinan gen mutasi resesif dan 1 salinan gen normal, kondisi ini disebut...',
-        options: ['Homozygous Visual', 'Heterozygous (Het)', 'Super Form', 'Line-bred'],
+        question: 'Jika seekor gecko memiliki satu alel normal dan satu alel resesif, kondisi ini disebut...',
+        options: ['Homozygous Recessive', 'Heterozygous (Het)', 'Super Form', 'Line-bred'],
         correctIndex: 1,
-        explanation: 'Heterozygous (Het) berarti memiliki 1 salinan gen mutasi dan 1 salinan normal, sehingga berperan sebagai pembawa sifat (carrier).'
+        explanation: 'Heterozygous (Het) memiliki satu alel normal (A) dan satu alel resesif (a), yang umumnya terlihat Normal tetapi membawa satu salinan alel resesif.'
       }
     ]
   },
@@ -207,68 +312,178 @@ Sifat **Line-bred** tidak dikendalikan oleh 1 tombol gen tunggal (Mendelian), me
     id: 'guide-03a-mengenal-morph-lg',
     slug: 'mengenal-morph-dan-kombinasi-leopard-gecko',
     title: '3. Mengenal Morph, Strain Albino & Kombinasi (Leopard Gecko)',
-    subtitle: 'Panduan khusus Leopard Gecko: 3 strain Albino, gen dasar populer, hingga cara membaca nama morph Combo.',
+    subtitle: 'Panduan khusus Leopard Gecko untuk mengenal strain Albino, pola pewarisan morph populer, sifat hasil seleksi, serta cara memahami nama kombinasi morph yang sering ditemukan dalam dunia breeding.',
     category: 'Mengenal Morph',
     species: 'Leopard Gecko',
     level: 'Pemula',
     order: 3,
-    readTimeMinutes: 5,
+    readTimeMinutes: 7,
     status: 'published',
     accessLevel: 'free',
     ctaType: 'encyclopedia',
     ctaLabel: 'Buka Katalog Morph Leopard Gecko',
     hasQuiz: true,
     hasGlossary: false,
-    content: `## Mengenal Kelompok Morph Leopard Gecko
+    content: `*Materi ini dikhususkan untuk spesies **Leopard Gecko (Eublepharis macularius)**. Istilah dan gen yang dibahas tidak otomatis berlaku untuk spesies reptil lain.*
 
-*Materi ini dikhususkan untuk spesies **Leopard Gecko (Eublepharis macularius)**.*
+## Mengenal Kelompok Morph Leopard Gecko
 
-Di dunia Leopard Gecko, ratusan nama morph yang beredar sebenarnya tersusun dari kombinasi **gen tunggal dasar** dan **seleksi warna (line-bred)**.
+Di dunia Leopard Gecko, banyak nama morph yang beredar merupakan kombinasi dari beberapa sifat genetik dan hasil seleksi breeder selama beberapa generasi.
 
----
+Untuk memahaminya, breeder perlu membedakan antara:
 
-### 1. Tiga Strain Albino Leopard Gecko (Wajib Hafal!)
-Pada Leopard Gecko terdapat **3 mutasi Recessive Albino yang berbeda lokus**:
-1. **Tremper Albino** *(paling umum & banyak dipakai di berbagai combo)*
-2. **Bell Albino** *(terkenal dengan kontras mata merah muda terang dan pola tegas)*
-3. **Rainwater Albino (Las Vegas)** *(cenderung memiliki tone warna pastel/pink lembut dan tubuh lebih cerah)*
+- **Single-Gene Morph:** Sifat yang terutama dikaitkan dengan satu lokus genetik.
+- **Combo Morph:** Kombinasi dua atau lebih sifat genetik dalam satu individu.
+- **Line-Bred / Polygenic Traits:** Karakteristik yang dikembangkan melalui seleksi indukan selama beberapa generasi dan dapat dipengaruhi banyak gen.
 
-> **Aturan Emas:** Ketiga strain Albino ini **TIDAK KOMPATIBEL** satu sama lain. Mengawinkan Tremper × Bell akan menghasilkan anakan Normal (*Double Het* yang membingungkan garis keturunan) dan sangat dilarang dalam etika breeding!
+Tidak semua nama morph memiliki pola pewarisan yang sama. Karena itu, memahami jenis pewarisannya jauh lebih penting daripada sekadar menghafal nama morph.
 
 ---
 
-### 2. Gen Dasar Populer pada Leopard Gecko
-* **Recessive:** *Tremper Albino*, *Bell Albino*, *Rainwater Albino*, *Eclipse* (mata hitam solid / snake eyes & ujung hidung-kaki putih), *Blizzard* (tanpa corak sejak lahir), *Murphy Patternless*.
-* **Incomplete Dominant:** *Mack Snow* (1 salinan mengurangi warna kuning bayi menjadi putih-hitam; 2 salinan menghasilkan **Super Snow** bermata hitam solid dengan pola garis bintik khas).
-* **Dominant:** *TUG Snow*, *White & Yellow (W&Y)*.
-* **Line-Bred / Polygenic:** *Tangerine* (oranye pekat), *SHTCT* (Super Hypo Tangerine Carrot Tail), *Black Night* (melanistik hitam pekat), *Blood*, *Bold Stripe*, *Red Stripe*.
+## 1. Tiga Strain Albino Leopard Gecko
+
+Leopard Gecko dikenal memiliki tiga strain Albino utama yang umum digunakan dalam dunia breeding:
+
+1. **Tremper Albino**
+2. **Bell Albino**
+3. **Rainwater Albino (Las Vegas Albino)**
+
+Ketiganya merupakan sifat resesif yang berbeda dan tidak saling melengkapi secara genetik (*non-complementary*).
+
+Artinya, masing-masing strain memiliki identitas genetik tersendiri. Untuk menghasilkan anakan Albino Visual, kedua alel yang sesuai harus berasal dari strain Albino yang sama.
+
+### Apa yang terjadi jika strain berbeda dikawinkan?
+
+Contoh:
+
+$$\\text{Tremper Albino Visual} \\times \\text{Bell Albino Visual}$$
+
+Hasil yang diharapkan:
+- 100% anakan terlihat Normal untuk kedua strain Albino tersebut.
+- 100% anakan membawa satu salinan Tremper Albino.
+- 100% anakan membawa satu salinan Bell Albino.
+- Status genetiknya disebut Double Het Tremper/Bell.
+
+Anakan tersebut tidak menjadi Tremper Visual maupun Bell Visual karena masing-masing hanya membawa satu salinan dari setiap strain.
+
+Hal yang sama berlaku pada persilangan antara strain Albino yang berbeda.
+
+### Apakah persilangan ini dilarang?
+
+Persilangan berbeda strain Albino bukan berarti otomatis menghasilkan anakan cacat atau tidak sehat.
+
+Namun, persilangan ini tidak direkomendasikan untuk program breeding yang ingin mempertahankan kemurnian dan kejelasan garis genetik.
+
+Pencampuran strain dapat membuat status genetik keturunan lebih rumit untuk dilacak dan meningkatkan risiko kesalahan identifikasi strain di masa depan. Oleh karena itu, breeder disarankan untuk menjaga kemurnian masing-masing strain Albino.
 
 ---
 
-### 3. Cara Membaca Nama "Combo Morph"
-Banyak nama keren sebenarnya adalah singkatan dari gabungan beberapa gen sekaligus! Contohnya:
-* **RAPTOR** = **Tremper Albino** + **Eclipse** (+ Patternless Stripe).
-* **RADAR** = **Bell Albino** + **Eclipse**.
-* **Typhoon** = **Rainwater Albino** + **Eclipse**.
-* **Diablo Blanco** = **Tremper Albino** + **Blizzard** + **Eclipse**.`,
-    exampleTitle: 'Membedah Nama Morph di Pasaran (Leopard Gecko)',
-    exampleContent: `Misalkan Anda membaca label gecko: "Mack Snow Tremper Het Eclipse"
-Artinya pada Leopard Gecko tersebut:
-1. Mack Snow = 1 salinan Incomplete Dominant (tampil visual lebih cerah).
-2. Tremper = 2 salinan Recessive Tremper Albino (tampil visual albino).
-3. Het Eclipse = Membawa 1 salinan tersembunyi gen Eclipse (matanya belum Eclipse penuh, tapi bisa menurunkan gen Eclipse ke anaknya).`,
-    warningTitle: 'Jangan Samakan dengan Spesies Lain',
-    warningContent: `Gen seperti Mack Snow, Eclipse, Blizzard, Tremper, Bell, dan Rainwater adalah gen spesifik Leopard Gecko dan TIDAK berlaku untuk African Fat-Tailed Gecko (AFT).`,
+## 2. Mengenal Pola Pewarisan Morph Populer
+
+Memahami kategori pewarisan memudahkan breeder memperkirakan hasil pairing tanpa harus menghafal setiap kombinasi secara terpisah.
+
+### A. Recessive
+Membutuhkan dua salinan alel agar sifat tersebut tampil secara visual.
+
+Contoh populer pada Leopard Gecko:
+- **Tremper Albino, Bell Albino, Rainwater Albino**
+- **Eclipse:** Memengaruhi pigmentasi mata (solid black, snake eyes) serta sering disertai corak putih pada ujung hidung dan kaki.
+- **Blizzard:** Menghilangkan seluruh pola dan bintik sejak menetas, menghasilkan tampilan warna polos.
+- **Murphy Patternless:** Pola tubuh memudar seiring pertumbuhan hingga menjadi polos saat dewasa.
+
+### B. Incomplete Dominant (Co-Dominant)
+Cukup satu salinan alel untuk memunculkan perubahan visual, sedangkan dua salinan alel menghasilkan bentuk super dengan tampilan yang berbeda secara visual.
+
+Contoh populer pada Leopard Gecko:
+- **Mack Snow:**
+  - 1 salinan (Heterozygous): Menghasilkan anak dengan warna dasar putih/kuning pucat (Mack Snow).
+  - 2 salinan (Homozygous / Super): Menghasilkan **Super Snow**, dengan mata solid hitam dan pola bintik bergaris yang sangat khas.
+- **Lemon Frost:** Contoh gen incomplete dominant lain dengan ekspresi visual kuat pada status hetero maupun super. Namun, gen ini memerlukan kehati-hatian khusus dalam breeding karena adanya kaitan genetik dengan peningkatan risiko lesi kulit/tumor.
+
+### C. Dominant
+Cukup satu salinan alel untuk memunculkan fenotipe mutasi.
+
+Contoh pada Leopard Gecko:
+- **TUG Snow:** Berbeda dari Mack Snow, TUG Snow diwariskan secara dominan dan umumnya tidak menghasilkan bentuk super yang berbeda.
+- **White & Yellow (W&Y):** Memodifikasi intensitas warna, kontras samping tubuh, dan pola dorsal.
+
+### D. Line-Bred / Polygenic Traits
+Karakteristik yang diperkuat melalui seleksi indukan pilihan selama bertahun-tahun. Karakteristik ini tidak mengikuti pola rasio satu gen Mendelian sederhana, melainkan ditentukan oleh akumulasi banyak gen pengatur (*modifier genes*).
+
+Contoh populer:
+- **Tangerine:** Intensitas pigmen oranye pada tubuh.
+- **SHTCT (Super Hypo Tangerine Carrot Tail):** Kombinasi pengurangan bintik (Hypo) dengan intensitas Tangerine dan oranye pada pangkal ekor.
+- **Black Night:** Melanistik pekat yang didapatkan dari seleksi garis keturunan ketat selama puluhan generasi.
+- **Bold Stripe, Red Stripe, Emerine:** Pola garis dan nuansa warna selektif.
+
+---
+
+## 3. Cara Membaca Nama Combo Morph
+
+Banyak nama morph populer di pasaran merupakan nama dagang atau kombinasi dari beberapa mutasi genetik sekaligus. Memahami rumus genetik di balik nama tersebut sangat penting sebelum membeli atau mengawinkannya.
+
+Contoh combo morph berbasis strain Albino:
+
+- **RAPTOR:**
+  - Kepanjangan: *Ruby-eyed Albino Patternless Tremper Orange*
+  - Rumus genetik utama: **Tremper Albino + Eclipse** (dikembangkan bersama garis Tremper Orange dan Patternless Stripe).
+- **APTOR:**
+  - *Albino Patternless Tremper Orange* (Tremper Albino dengan corak stripe/orange tanpa gen Eclipse).
+- **RADAR:**
+  - Rumus genetik utama: **Bell Albino + Eclipse**.
+- **Typhoon:**
+  - Rumus genetik utama: **Rainwater Albino + Eclipse**.
+- **Diablo Blanco:**
+  - Rumus genetik utama: **Tremper Albino + Blizzard + Eclipse** (menghasilkan gecko serba putih polos dengan mata merah padat).
+
+Perhatikan bahwa RAPTOR, RADAR, dan Typhoon memiliki peran serupa dalam menampilkan mutasi Eclipse bersama Albino, tetapi masing-masing menggunakan strain Albino yang berbeda.
+
+---
+
+## 4. Membedah Nama Morph di Pasaran
+
+Saat melihat label gecko di pasar atau kontes, nama yang panjang sering kali mencantumkan sifat visual sekaligus sifat carrier (*Het*).
+
+**Studi Kasus Label:**
+\`Mack Snow Tremper Albino Het Eclipse\`
+
+Cara membaca status genetiknya:
+1. **Mack Snow:** Gecko ini membawa 1 salinan gen Mack Snow (Incomplete Dominant), sehingga warna dasarnya lebih cerah/pucat.
+2. **Tremper Albino:** Gecko ini membawa 2 salinan alel Tremper Albino (Homozygous Recessive), sehingga tampil visual Albino.
+3. **Het Eclipse:** Gecko ini membawa 1 salinan alel Eclipse (Heterozygous Recessive). Matanya tidak menunjukkan visual Eclipse penuh, namun dapat mewariskan gen Eclipse kepada keturunannya jika dipasangkan dengan gecko yang membawa gen serupa.
+
+Dari contoh ini terlihat bahwa satu ekor gecko dapat memiliki sifat dominan/inkomplit dominan visual, sifat resesif visual, dan sifat resesif carrier (*Het*) secara bersamaan.
+
+---
+
+## 5. Jangan Samakan Gen Antarspesies
+
+Materi ini secara khusus membahas **Leopard Gecko (*Eublepharis macularius*)**.
+
+Penting untuk dipahami bahwa mutasi genetik pada Leopard Gecko tidak dapat diterapkan atau diasumsikan sama pada spesies lain, seperti **African Fat-Tailed Gecko (*Hemitheconyx caudicinctus*)**.
+
+Meskipun keduanya tampak mirip dan sama-sama berasal dari famili Eublepharidae:
+- Leopard Gecko memiliki gen khas seperti Mack Snow, Tremper Albino, Bell Albino, Rainwater Albino, Blizzard, Murphy Patternless, dan Eclipse.
+- African Fat-Tailed Gecko memiliki mutasi khasnya sendiri, seperti Oreo, Whiteout, Amelanistic (AFT), Zulu, Zero, Ghost, dan Caramel.
+
+Memahami batasan spesies ini penting agar breeder tidak mencampuradukkan nama morph, kalkulator genetik, maupun ekspektasi persilangan.`,
+    exampleTitle: 'Studi Kasus Label Morph: Mack Snow Tremper Albino Het Eclipse',
+    exampleContent: '1 salinan Mack Snow (Incomplete Dominant) + 2 salinan Tremper Albino (Visual Recessive) + 1 salinan Eclipse (Het carrier tersembunyi). Satu gecko dapat membawa multi-lokus dengan status visual dan carrier sekaligus.',
+    warningTitle: 'Peringatan: Tiga Strain Albino Tidak Saling Melengkapi',
+    warningContent: 'Tremper, Bell, dan Rainwater Albino adalah lokus resesif yang berbeda. Mengawinkan strain berbeda menghasilkan anakan Normal Double Het yang merusak kemurnian catatan silsilah.',
     summaryPoints: [
-      'Leopard Gecko memiliki 3 strain Albino resesif berbeda: Tremper, Bell, dan Rainwater yang pantang disilangkan satu sama lain.',
-      'Mack Snow adalah gen Incomplete Dominant pada LG yang menghasilkan Super Snow saat berstatus 2 salinan (Homozygous).',
-      'Nama morph seperti RAPTOR, RADAR, dan Diablo Blanco adalah kombinasi dari beberapa gen resesif dasar.',
-      'Tangerine dan Black Night merupakan sifat Line-bred yang kualitas warnanya dijaga lewat seleksi indukan.'
+      'Leopard Gecko memiliki tiga strain Albino utama (Tremper, Bell, dan Rainwater) yang bersifat resesif terpisah dan tidak saling melengkapi (non-complementary).',
+      'Mengawinkan dua strain Albino yang berbeda menghasilkan anakan Normal Double Het, bukan Albino Visual, dan tidak direkomendasikan demi menjaga kemurnian silsilah.',
+      'Sifat genetik Leopard Gecko terbagi ke dalam Single-Gene (Recessive, Incomplete Dominant, Dominant), Combo Morph, dan Line-Bred / Polygenic.',
+      'Mack Snow adalah mutasi Incomplete Dominant di mana 1 salinan menghasilkan Mack Snow dan 2 salinan menghasilkan Super Snow bermata solid.',
+      'Sifat Line-Bred seperti Tangerine dan Black Night diwariskan secara poligenik melalui seleksi indukan bertahap, bukan rasio Mendelian sederhana.',
+      'Nama combo populer seperti RAPTOR, RADAR, Typhoon, dan Diablo Blanco merupakan singkatan atau gabungan dari beberapa mutasi genetik dasar.',
+      'Mutasi dan nama morph Leopard Gecko bersifat spesifik spesies dan tidak dapat disamakan dengan sistem genetik African Fat-Tailed Gecko (AFT).'
     ],
     quiz: [
       {
         id: 'q3a-1',
-        question: 'Manakah di bawah ini yang merupakan tiga strain Albino pada Leopard Gecko?',
+        question: 'Tiga strain Albino utama pada Leopard Gecko yang tidak saling melengkapi secara genetik adalah:',
         options: [
           'Oreo, Zulu, dan Caramel',
           'Tremper, Bell, dan Rainwater',
@@ -276,19 +491,19 @@ Artinya pada Leopard Gecko tersebut:
           'RAPTOR, RADAR, dan Diablo Blanco'
         ],
         correctIndex: 1,
-        explanation: 'Tiga strain Albino resesif pada Leopard Gecko adalah Tremper, Bell, dan Rainwater.'
+        explanation: 'Tiga strain Albino utama pada Leopard Gecko adalah Tremper Albino, Bell Albino, dan Rainwater Albino. Ketiganya berada pada lokus resesif yang berbeda (non-complementary).'
       },
       {
         id: 'q3a-2',
         question: 'Kombinasi gen apakah yang membentuk morph "Diablo Blanco" pada Leopard Gecko?',
         options: [
-          'Bell Albino + Mack Snow',
+          'Bell Albino + Mack Snow + Blizzard',
           'Tremper Albino + Blizzard + Eclipse',
-          'Rainwater Albino + Murphy Patternless',
-          'Tangerine + White & Yellow'
+          'Rainwater Albino + Murphy Patternless + White & Yellow',
+          'Tangerine + Black Night + Eclipse'
         ],
         correctIndex: 1,
-        explanation: 'Diablo Blanco adalah kombinasi 3 gen resesif sekaligus: Tremper Albino, Blizzard, dan Eclipse.'
+        explanation: 'Diablo Blanco adalah kombinasi 3 gen resesif sekaligus pada Leopard Gecko: Tremper Albino + Blizzard + Eclipse.'
       }
     ]
   },
@@ -380,90 +595,290 @@ Artinya pada AFT tersebut:
     id: 'guide-04-dasar-pairing',
     slug: 'dasar-pairing-pewarisan-induk-ke-anakan',
     title: '4. Dasar Pairing: Cara Sifat Genetik Diwariskan ke Keturunan',
-    subtitle: 'Memahami rumus praktis persilangan induk (Visual × Normal, Visual × Het, dan Het × Het) tanpa pusing.',
+    subtitle: 'Memahami bagaimana sifat genetik diwariskan dari induk kepada anakan melalui contoh persilangan yang paling sering digunakan dalam breeding Leopard Gecko.',
     category: 'Dasar Pairing',
     species: 'Umum',
     level: 'Pemula',
     order: 4,
-    readTimeMinutes: 5,
+    readTimeMinutes: 7,
     status: 'published',
     accessLevel: 'free',
     ctaType: 'morph_calculator',
     ctaLabel: 'Praktikkan Rumus Pairing di Morph Calculator',
     hasQuiz: true,
     hasGlossary: false,
-    content: `## Rumus Emas Dasar Pairing
+    content: `## Mengapa Memahami Dasar Pairing Itu Penting?
 
-Setiap kali induk Jantan (**Sire**) dan induk Betina (**Dam**) kawin, masing-masing induk akan menyumbangkan **1 salinan alel secara acak** kepada setiap butir telur.
+Dalam breeding, setiap pairing memiliki kemungkinan hasil genetik yang dapat diprediksi berdasarkan genotipe kedua induk.
 
-Untuk memudahkan pemula, mari pelajari **4 skenario pairing gen Recessive** yang paling sering dilakukan breeder:
+Dengan memahami cara kerja pewarisan alel, breeder dapat memperkirakan peluang munculnya anakan Visual, Het, maupun Normal.
 
----
+Untuk memudahkan pembahasan, kita gunakan model sederhana satu lokus gen resesif:
 
-### Skenario 1: Visual × Visual
-* **Sire:** Visual (2 salinan mutasi)
-* **Dam:** Visual (2 salinan mutasi)
-* **Hasil Anakan:** **100% Visual!** Karena kedua induk hanya memiliki alel mutasi untuk diberikan. *(Tips: Sesekali lakukan outcross dengan Het berkualitas agar keragaman darah tetap sehat).*
+- **A** = Alel normal.
+- **a** = Alel resesif.
 
----
+Sehingga:
 
-### Skenario 2: Visual × Normal (Non-Het)
-* **Sire:** Visual (2 salinan mutasi)
-* **Dam:** Normal murni (0 salinan mutasi)
-* **Hasil Anakan:** **100% tampak Normal secara fisik, berstatus 100% Het.**
-* *Mengapa?* Karena Sire pasti memberi 1 alel mutasi, dan Dam pasti memberi 1 alel normal. Semua anakan pasti membawa 1 salinan gen mutasi!
+- **AA** = Homozygous Normal / Non-Carrier untuk gen yang dibahas.
+- **Aa** = Heterozygous / Het.
+- **aa** = Homozygous Recessive / Visual.
+
+Semua perhitungan dalam empat skenario berikut berlaku untuk satu lokus dengan pola pewarisan resesif sederhana, dengan asumsi status genetik indukan diketahui dengan benar.
 
 ---
 
-### Skenario 3: Visual × 100% Het *(Favorit Breeder!)*
-* **Sire:** Visual (2 salinan mutasi)
-* **Dam:** 100% Het (1 salinan mutasi + 1 salinan normal)
-* **Hasil Anakan:**
-  * **50% Visual** (mendapat salinan mutasi dari Sire & Dam)
-  * **50% tampak Normal berstatus 100% Het** (mendapat mutasi dari Sire & normal dari Dam)
-* *Keunggulan:* Tidak ada anakan "Possible Het" yang meragukan—semua anakan yang tidak visual sudah pasti **100% Het**!
+## Rumus Dasar Pewarisan Alel
+
+Pada setiap lokus gen autosomal, anakan umumnya menerima satu alel dari induk jantan (Sire) dan satu alel dari induk betina (Dam).
+
+Alel yang diwariskan dipilih secara acak dari dua salinan alel yang dimiliki masing-masing induk.
+
+Karena itu, setiap anakan memiliki peluang genetik tersendiri.
+
+**Penting:** Persentase hasil pairing merupakan probabilitas untuk setiap anakan, bukan jaminan bahwa satu clutch akan selalu menghasilkan rasio yang persis sama.
 
 ---
 
-### Skenario 4: 100% Het × 100% Het
-* **Sire:** 100% Het
-* **Dam:** 100% Het
-* **Hasil Statistik Anakan:**
-  * **25% Visual** (mendapat mutasi dari kedua induk)
-  * **50% Het** (mendapat 1 mutasi + 1 normal)
-  * **25% Normal Murni** (mendapat normal dari kedua induk)
-* *Penting:* Karena 50% Het dan 25% Normal tampak sama persis secara fisik (total 75% anakan berfisik normal, di mana 2 dari 3 di antaranya sebenarnya Het), maka anakan berfisik normal dari pairing ini disebut **66% Possible Het (Poss Het)**!`,
-    exampleTitle: 'Bagaimana dengan Gen Dominant / Incomplete Dominant (1 Salinan)?',
-    exampleContent: `Jika Anda memasangkan induk ber-gen 1 salinan Visual (seperti Dominant atau Incomplete Dominant tunggal) dengan induk Normal:
-• Hasilnya: 50% anakan tampil Visual, dan 50% anakan Normal murni (tanpa Het).
-Sangat praktis untuk menggabungkan gen visual di generasi pertama!`,
-    warningTitle: 'Hindari Inbreeding Berlebihan',
-    warningContent: `Meskipun mengawinkan saudara kandung (sibling) atau anak ke induk (backcross) sering dipakai untuk mengejar gen resesif, jangan lakukan terus-menerus terlalu rapat tanpa memasukkan darah segar (Outcross) karena dapat menurunkan daya tahan tubuh dan kesuburan anakan.`,
+## 1. Skenario Visual × Visual
+
+**Sire:** Visual Recessive (aa)  
+**Dam:** Visual Recessive (aa)
+
+Kedua induk hanya memiliki alel resesif pada lokus yang sedang dibahas.
+
+**Hasil persilangan:**
+
+$$\\text{aa} \\times \\text{aa}$$
+
+- **100% Visual Recessive (aa)**.
+
+Seluruh anakan menerima satu alel resesif dari masing-masing induk sehingga semuanya memiliki dua salinan alel resesif.
+
+**Catatan breeding:**
+
+Pairing Visual × Visual dapat digunakan untuk mempertahankan atau menghasilkan keturunan visual pada gen yang sama.
+
+Namun, jangan hanya mempertimbangkan hasil visual. Kualitas indukan, kesehatan, riwayat reproduksi, dan tingkat kekerabatan tetap harus diperhatikan.
+
+---
+
+## 2. Skenario Visual × Normal Non-Carrier
+
+**Sire:** Visual Recessive (aa)  
+**Dam:** Homozygous Normal / Non-Carrier (AA)
+
+Induk Visual selalu memberikan alel resesif (a), sedangkan induk Non-Carrier selalu memberikan alel normal (A).
+
+**Hasil persilangan:**
+
+$$\\text{aa} \\times \\text{AA}$$
+
+- **100% Het Recessive (Aa)**.
+- **0% Visual**.
+- **0% Homozygous Normal**.
+
+Seluruh anakan terlihat Normal untuk sifat yang dibahas, tetapi semuanya membawa satu salinan alel resesif.
+
+Kondisi ini disebut **100% Het**.
+
+**Catatan penting:** Istilah Normal Non-Carrier hanya berlaku untuk gen yang sedang dibahas. Gecko tersebut masih mungkin membawa gen resesif lain.
+
+---
+
+## 3. Skenario Visual × 100% Het
+
+**Sire:** Visual Recessive (aa)  
+**Dam:** Heterozygous / Het (Aa)
+
+Induk Visual selalu memberikan alel resesif (a). Induk Het memiliki peluang memberikan alel normal (A) atau alel resesif (a).
+
+**Hasil persilangan:**
+
+$$\\text{aa} \\times \\text{Aa}$$
+
+- **50% Visual Recessive (aa)**.
+- **50% Het Recessive (Aa)**.
+- **0% Homozygous Normal**.
+
+Artinya, setiap anakan memiliki peluang 50% menjadi Visual dan 50% menjadi Het.
+
+**Keunggulan pairing ini:**
+
+Tidak ada anakan berstatus Possible Het. Seluruh anakan yang tidak visual sudah pasti 100% Het untuk gen yang dibahas.
+
+Namun, perlu dipahami bahwa istilah 100% Het di sini berlaku untuk kelompok anakan yang tidak visual, bukan seluruh keturunan.
+
+---
+
+## 4. Skenario 100% Het × 100% Het
+
+**Sire:** Heterozygous (Aa)  
+**Dam:** Heterozygous (Aa)
+
+Masing-masing induk memiliki satu alel normal dan satu alel resesif.
+
+**Hasil persilangan:**
+
+$$\\text{Aa} \\times \\text{Aa}$$
+
+- **25% Visual Recessive (aa)**.
+- **50% Het Recessive (Aa)**.
+- **25% Homozygous Normal (AA)**.
+
+Jika dilihat dari penampilan fisik:
+
+- **25% Visual**.
+- **75% terlihat Normal**.
+
+Namun, dari kelompok 75% yang terlihat Normal, terdapat dua kemungkinan:
+- 50% dari seluruh anakan adalah Het.
+- 25% dari seluruh anakan adalah Homozygous Normal.
+
+Karena kedua kelompok tersebut terlihat sama secara fisik, status genetik individu Normal belum dapat dipastikan hanya dari penampilannya.
+
+### Mengapa Disebut 66% Possible Het?
+
+Perhitungan dilakukan hanya pada kelompok anakan yang terlihat Normal.
+
+Dari total keturunan:
+- 50% merupakan Het.
+- 25% merupakan Homozygous Normal.
+- Total yang terlihat Normal = 75%.
+
+Maka:
+
+$$\\frac{50}{75} \\times 100\\% = 66{,}67\\%$$
+
+Artinya, setiap anakan yang terlihat Normal dari pairing Het × Het memiliki peluang sekitar 66,7% menjadi Het untuk gen tersebut.
+
+Istilah ini disebut **66% Possible Het (Poss Het)**.
+
+Angka tersebut merupakan probabilitas berdasarkan hasil persilangan, bukan bukti pasti bahwa individu tertentu adalah Het.
+
+---
+
+## 5. Memahami Punnett Square
+
+Punnett Square adalah diagram sederhana yang digunakan untuk memperkirakan kemungkinan kombinasi alel dari kedua induk.
+
+Contoh: Het × Het (Aa × Aa).
+
+Alel dari induk pertama ditempatkan di bagian atas, sedangkan alel dari induk kedua ditempatkan di bagian samping.
+
+Setiap kotak menunjukkan satu kemungkinan kombinasi alel pada anakan.
+
+Hasilnya:
+
+| Kombinasi | Genotipe | Peluang |
+|---|---|---:|
+| A × A | AA | 25% |
+| A × a | Aa | 25% |
+| a × A | Aa | 25% |
+| a × a | aa | 25% |
+
+Jika digabungkan:
+
+- **AA** = 25% Homozygous Normal.
+- **Aa** = 50% Het.
+- **aa** = 25% Visual Recessive.
+
+Punnett Square membantu breeder memahami asal perhitungan peluang genetik, bukan sekadar menghafal persentase.
+
+---
+
+## 6. Bagaimana dengan Gen Dominant dan Incomplete Dominant?
+
+Pola pewarisan Dominant dan Incomplete Dominant memiliki perbedaan dari pola resesif.
+
+Pada pola Dominant atau Incomplete Dominant tertentu, satu salinan alel sudah cukup untuk menghasilkan karakteristik visual.
+
+Contoh sederhana:
+
+**Induk satu salinan sifat × Homozygous Normal**
+
+- **50%** anakan mewarisi satu salinan sifat tersebut.
+- **50%** anakan tidak mewarisi alel tersebut dan menjadi Homozygous Normal pada lokus itu.
+
+Contoh Mack Snow:
+
+**Mack Snow satu salinan × Normal (AA)**
+
+- **50%** Mack Snow.
+- **50%** Normal.
+
+Namun, hasil persilangan dapat berbeda jika induk memiliki dua salinan gen tertentu.
+
+Contohnya, Super Snow × Normal tidak menghasilkan rasio yang sama dengan Mack Snow satu salinan × Normal.
+
+**Penting:** Tidak semua gen Dominant atau Incomplete Dominant memiliki pola, tampilan, dan konsekuensi yang sama. Pelajari karakteristik setiap gen secara spesifik sebelum melakukan pairing.
+
+---
+
+## 7. Hindari Inbreeding Berlebihan
+
+Inbreeding adalah perkawinan antara individu yang memiliki hubungan kekerabatan dekat, misalnya saudara kandung atau induk dengan keturunannya.
+
+Dalam breeding, perkawinan kerabat terkadang digunakan untuk mempertahankan atau mengembangkan karakteristik garis keturunan tertentu.
+
+Namun, perkawinan kerabat juga meningkatkan kemungkinan alel resesif yang merugikan bertemu dalam kondisi Homozygous.
+
+Dalam jangka panjang, hal tersebut dapat meningkatkan risiko:
+- Munculnya kelainan genetik yang sebelumnya tersembunyi.
+- Penurunan fertilitas.
+- Penurunan kualitas dan daya tahan keturunan.
+- Meningkatnya masalah kesehatan pada garis keturunan tertentu.
+
+Risiko tersebut tidak berarti setiap hasil inbreeding pasti bermasalah. Besarnya risiko dipengaruhi tingkat kekerabatan, variasi genetik, dan riwayat kesehatan garis keturunan.
+
+### Apa itu Outcross?
+
+Outcross adalah pairing antara individu yang berasal dari garis keturunan berbeda atau memiliki tingkat kekerabatan yang lebih rendah.
+
+Outcross dapat membantu meningkatkan keragaman genetik dalam suatu proyek breeding.
+
+Namun, outcross bukan jaminan otomatis menghasilkan anakan sehat. Riwayat kesehatan, kualitas indukan, dan status genetik tetap harus diperiksa.
+
+**Prinsip utama:** Jangan hanya mengejar morph atau warna. Kesehatan, kualitas genetik, dan manajemen kekerabatan harus menjadi pertimbangan utama dalam setiap proyek breeding.`,
+    exampleTitle: 'Memahami Probabilitas Dominant & Incomplete Dominant',
+    exampleContent: 'Pada gen Dominant/Incomplete Dominant dengan 1 salinan alel mutasi (Heterozygous) × Normal (AA), peluang keturunan adalah 50% Visual mewarisi 1 salinan alel dan 50% Normal Non-Carrier. Namun jika induk membawa 2 salinan (seperti Super Snow), seluruh anakan (100%) akan mewarisi 1 salinan alel tersebut.',
+    warningTitle: 'Manajemen Kekerabatan & Risiko Inbreeding',
+    warningContent: 'Perkawinan kerabat dekat secara berulang dapat mempertemukan alel cacat resesif tersembunyi. Seimbangkan proyek Anda dengan Outcross yang terverifikasi sehat untuk menjaga vitalitas dan kesuburan.',
     summaryPoints: [
-      'Visual × Normal menghasilkan 100% anakan berstatus 100% Het.',
-      'Visual × 100% Het menghasilkan peluang 50% Visual dan 50% pasti 100% Het (sangat efisien dan bersih).',
-      '100% Het × 100% Het menghasilkan peluang 25% Visual, sementara anakan berfisik normalnya berstatus 66% Possible Het.',
-      '1 salinan Dominant/Incomplete Dominant × Normal menghasilkan peluang 50% Visual.'
+      'Setiap anakan umumnya menerima satu alel dari induk jantan dan satu alel dari induk betina pada setiap lokus gen autosomal.',
+      'Visual × Visual pada gen resesif yang sama menghasilkan 100% Visual.',
+      'Visual × Normal Non-Carrier menghasilkan 100% Het.',
+      'Visual × Het menghasilkan 50% Visual dan 50% Het.',
+      'Het × Het menghasilkan 25% Visual, 50% Het, dan 25% Homozygous Normal.',
+      'Anakan yang terlihat Normal dari pairing Het × Het memiliki peluang sekitar 66,7% menjadi Het (66% Possible Het).',
+      'Punnett Square digunakan untuk memperkirakan kombinasi alel dan peluang hasil pairing.',
+      'Perhitungan Dominant dan Incomplete Dominant harus memperhatikan jumlah salinan gen pada induk.',
+      'Manajemen kekerabatan dan keragaman genetik penting untuk menjaga kualitas proyek breeding.'
     ],
     quiz: [
       {
         id: 'q4-1',
-        question: 'Berapa peluang munculnya anakan Visual jika Anda menyilangkan induk Visual Recessive × induk 100% Het (pada gen yang sama)?',
-        options: ['100% Visual', '50% Visual dan 50% berstatus 100% Het', '25% Visual', '0% Visual'],
+        question: 'Berapa peluang munculnya anakan Visual jika Anda menyilangkan induk Visual Recessive × induk 100% Het pada gen yang sama?',
+        options: [
+          '100% Visual',
+          '50% Visual dan 50% Het',
+          '25% Visual',
+          '0% Visual'
+        ],
         correctIndex: 1,
-        explanation: 'Visual selalu menyumbang gen mutasi, sedangkan 100% Het punya peluang 50:50 menyumbang gen mutasi atau normal. Hasilnya 50% Visual dan 50% sisanya pasti 100% Het.'
+        explanation: 'Induk Visual selalu menyumbangkan alel resesif (a), sedangkan induk Het memiliki peluang 50% memberikan alel resesif (a) dan 50% alel normal (A). Hasilnya adalah 50% Visual Recessive (aa) dan 50% Het Recessive (Aa).'
       },
       {
         id: 'q4-2',
-        question: 'Dari mana asal-usul istilah "66% Possible Het"?',
+        question: 'Dari mana asal istilah 66% Possible Het?',
         options: [
-          'Dari anakan berfisik normal hasil kawin 100% Het × 100% Het (2 dari 3 kemungkinan normal adalah Het)',
-          'Dari suhu inkubator 66 derajat',
-          'Dari hasil kawin Visual × Normal',
-          'Dari anakan yang coraknya 66% belang'
+          'Dari anakan berfisik Normal hasil pairing Het × Het, karena 2 dari 3 kemungkinan genotipe Normal adalah Het.',
+          'Dari suhu inkubator 66 derajat.',
+          'Dari hasil pairing Visual × Normal.',
+          'Dari anakan yang memiliki corak 66% belang.'
         ],
         correctIndex: 0,
-        explanation: 'Pada Het × Het, 25% keluar Visual. Dari 75% anakan yang tampak normal (50% Het + 25% Normal murni), peluang seekor anakan benar-benar membawa gen Het adalah 50/75 = 66,6% (ditulis 66% Poss Het).'
+        explanation: 'Dari pairing Het × Het (Aa × Aa), keturunan yang terlihat Normal berjumlah 75% (50% Aa + 25% AA). Peluang seekor anakan berpenampilan Normal membawa alel resesif (Het) adalah 50 ÷ 75 = 66,67%.'
       }
     ]
   },
@@ -648,86 +1063,269 @@ Kejujuran silsilah adalah fondasi integritas seorang breeder:
     id: 'guide-06a-genetic-warning-lg',
     slug: 'genetic-warning-risiko-kesehatan-leopard-gecko',
     title: '5. Genetic Warning & Etika Breeding (Leopard Gecko)',
-    subtitle: 'Mengenal risiko serius pada Leopard Gecko: Enigma Syndrome, Lemon Frost, White & Yellow, dan kontaminasi Albino.',
+    subtitle: 'Memahami risiko kesehatan yang berkaitan dengan morph tertentu, dampak inbreeding, serta tanggung jawab breeder dalam menjaga kesehatan indukan, keturunan, dan koloni leopard gecko.',
     category: 'Genetic Warning',
     species: 'Leopard Gecko',
     level: 'Pemula',
     order: 5,
-    readTimeMinutes: 5,
+    readTimeMinutes: 8,
+    coverImageUrl: '',
+    imageCaption: 'Ilustrasi Edukasi Genetic Warning & Etika Breeding Leopard Gecko',
     status: 'published',
     accessLevel: 'free',
     ctaType: 'breeder_ai',
     ctaLabel: 'Cek Keamanan Pairing Anda dengan Breeder AI',
     hasQuiz: true,
     hasGlossary: false,
-    content: `## Mengutamakan Kesehatan Hewan di Atas Warna
+    content: `*Materi pembelajaran ini dikhususkan untuk spesies **Leopard Gecko (Eublepharis macularius)**.*
 
-*Materi keselamatan ini dikhususkan untuk spesies **Leopard Gecko**.*
+## 1. Mengapa Genetic Warning Penting?
 
-Dalam hobi genetika reptil, beberapa mutasi warna ternyata terikat langsung (*pleiotropy*) dengan gangguan saraf atau risiko kesehatan fatal. Breeder yang bertanggung jawab wajib memahami daftar **Genetic Warning** berikut sebelum memasangkan indukan:
+Tidak semua kombinasi genetik menghasilkan keturunan yang sehat. Beberapa morph memiliki hubungan dengan gangguan kesehatan tertentu, sementara praktik breeding yang tidak bertanggung jawab dapat meningkatkan risiko masalah genetik maupun kesejahteraan hewan.
 
----
+Sebagai breeder, tujuan breeding bukan sekadar menghasilkan warna atau pola yang menarik, tetapi juga menjaga kesehatan, kualitas hidup, dan keberlanjutan garis keturunan.
 
-### 1. Enigma (Enigma Syndrome — Risiko Tinggi)
-Gen **Enigma** (Dominant) menciptakan pola bintik melingkar dan warna unik, namun terikat langsung dengan kelainan neurologis **Enigma Syndrome (ES)**:
-* **Gejala:** Kepala mendongak menatap bintang (*stargazing*), berjalan berputar-putar (*circling*), kehilangan keseimbangan hingga berguling, dan kesulitan menangkap mangsa sendiri.
-* **Catatan penting:** Bahkan indukan Enigma yang tampak mulus tanpa gejala tetap bisa melahirkan anakan dengan gejala ES berat, terutama saat mengalami stres atau ganti kulit.
+> **Prinsip Utama:** Kesehatan dan kesejahteraan gecko harus lebih diutamakan daripada penampilan.
 
 ---
 
-### 2. Lemon Frost (Risiko Tumor Ganas — Pantang Diternakkan!)
-Gen **Lemon Frost** menghasilkan warna kuning-putih menyala akibat produksi sel iridophore berlebih.
-* Namun mutasi ini terbukti secara ilmiah memicu **tumor kulit ganas (*iridophoroma*)** yang menyebar pada mayoritas besar individunya seiring bertambah usia.
-* Mengawinkan sesama Lemon Frost (*Super Lemon Frost*) bersifat letal, dan komunitas global sepakat untuk **menghentikan pembiakan Lemon Frost** demi kesejahteraan satwa.
+## 2. Enigma Syndrome
+
+Enigma merupakan morph leopard gecko yang memiliki hubungan dengan gangguan neurologis yang dikenal sebagai **Enigma Syndrome**.
+
+Gejala yang pernah dilaporkan meliputi:
+- **Stargazing** atau posisi kepala mendongak secara tidak normal.
+- Berjalan berputar (*circling*) atau berulang kali bergerak dalam lingkaran.
+- Kehilangan keseimbangan dan kesulitan mengendalikan gerakan.
+- Kesulitan menangkap mangsa.
+- Respons gerakan yang tidak terkoordinasi.
+
+**Hal yang perlu dipahami:**
+- Tingkat keparahan gejala dapat berbeda antarindividu.
+- Tidak semua Enigma menunjukkan gejala yang sama.
+- Mekanisme pewarisan dan faktor yang menentukan tingkat keparahan belum dipahami sepenuhnya.
+- Indukan yang tidak menunjukkan gejala belum tentu menjamin seluruh keturunannya bebas dari risiko.
+
+**Rekomendasi breeding:** Hindari membiakkan Enigma yang menunjukkan gangguan neurologis. Jika ditemukan gejala yang mencurigakan, prioritaskan pemeriksaan dokter hewan reptil dan jangan menjadikan hewan tersebut sebagai indukan.
 
 ---
 
-### 3. White & Yellow / W&Y (W&Y Syndrome pada Garis Tertentu)
-Pada awal kemunculannya, beberapa garis keturunan **White & Yellow** menunjukkan gejala mirip gangguan keseimbangan ringan.
-* Berbeda dengan Enigma, melalui seleksi ketat (*outcrossing* jauh dari darah Enigma), banyak lini W&Y modern saat ini sudah jauh lebih stabil dan sehat.
-* **Aturan wajib:** Jangan pernah mengawinkan **W&Y × Enigma**, dan hanya gunakan indukan W&Y dari garis sehat yang bebas gejala neurologis.
+## 3. Lemon Frost dan Risiko Tumor
+
+Lemon Frost dikenal karena warna putih dan kuning yang mencolok. Namun, morph ini memiliki risiko kesehatan serius yang telah didokumentasikan dalam penelitian ilmiah.
+
+Mutasi Lemon Frost berhubungan dengan peningkatan proliferasi sel pigmen yang disebut iridophores. Kondisi ini dapat berkembang menjadi tumor yang dikenal sebagai **iridophoroma**, termasuk tumor yang bersifat ganas.
+
+**Hal yang perlu dipahami:**
+- Risiko tumor pada Lemon Frost telah didukung oleh penelitian ilmiah.
+- Tumor dapat muncul pada bagian tubuh tertentu, termasuk area mulut dan bawah rahang.
+- Tidak berarti setiap individu pasti mengalami tumor.
+- Super Lemon Frost tidak boleh disebut pasti mematikan karena klaim tersebut terlalu mutlak dan tidak didukung bukti yang memadai.
+
+**Rekomendasi breeding:** Sangat tidak disarankan membiakkan Lemon Frost maupun Super Lemon Frost karena risiko kesehatannya yang serius dan telah terdokumentasi. Penampilan yang menarik tidak sebanding dengan potensi penderitaan yang dapat dialami hewan.
 
 ---
 
-### 4. Mencampur Strain Albino & Inbreeding Ekstrem
-* **Pantang Campur Albino:** Jangan pernah menyilangkan *Tremper*, *Bell*, dan *Rainwater* satu sama lain karena menghasilkan anakan dengan genetik tercemar (*Mystery Het*) yang merusak kejelasan silsilah komunitas.
-* **Black Night & Super Snow:** Lini *Black Night* atau *Super Snow* yang di-*inbreed* terlalu ketat tanpa *outcross* rentan mengalami ukuran tubuh kerdil, kelainan moncong/kelopak mata, dan daya tetas rendah.`,
-    exampleTitle: 'Checklist Aman Sebelum Memasangkan Leopard Gecko',
-    exampleContent: `1. Apakah kedua induk menggunakan strain Albino yang sama (tidak mencampur Tremper/Bell/Rainwater)?
-2. Apakah indukan bebas dari gen berisiko berat (Lemon Frost / Enigma)?
-3. Apakah garis keturunan tidak mengalami inbreeding saudara kandung berulang tanpa outcross?`,
-    warningTitle: 'Prinsip Etika Breeder GFP',
-    warningContent: `Kesehatan dan kualitas hidup gecko selalu lebih berharga daripada keunikan warna. Hindari membiakkan individu yang menunjukkan cacat genetik bawaan atau gangguan saraf.`,
+## 4. White & Yellow (W&Y): Pahami Batas Bukti Ilmiah
+
+White & Yellow (W&Y) dikenal sebagai morph yang memengaruhi pola dan tampilan warna leopard gecko.
+
+Ada laporan dan pembahasan di kalangan breeder mengenai variasi kondisi kesehatan pada beberapa garis keturunan W&Y. Namun, bukti ilmiah yang kuat untuk menetapkan suatu gangguan neurologis khusus sebagai W&Y Syndrome masih terbatas.
+
+**Hal yang perlu dipahami:**
+- W&Y dan Enigma merupakan morph yang berbeda.
+- Jangan menganggap semua W&Y memiliki gangguan neurologis.
+- Jangan menyimpulkan bahwa persilangan W&Y dengan Enigma otomatis menghasilkan gangguan kesehatan tertentu.
+- Riwayat kesehatan individu dan garis keturunan tetap perlu diperhatikan.
+
+**Rekomendasi breeding:** Evaluasi kesehatan dan riwayat garis keturunan setiap individu. Jangan menggunakan hewan dengan gangguan kesehatan sebagai indukan, terlepas dari morph-nya.
+
+---
+
+## 5. Mencampur Strain Albino dan Menjaga Identitas Genetik
+
+Leopard gecko memiliki tiga strain Albino yang dikenal luas:
+1. **Tremper Albino**
+2. **Bell Albino**
+3. **Rainwater Albino**
+
+Ketiganya merupakan strain resesif yang berbeda dan tidak saling melengkapi secara genetik (*non-complementary*).
+
+Contohnya, persilangan Tremper Albino visual dengan Bell Albino visual tidak menghasilkan anakan Albino visual. Anakan dapat terlihat normal secara visual, tetapi membawa alel dari kedua strain tersebut.
+
+**Hal yang perlu dipahami:**
+- Mencampur strain Albino tidak otomatis membuat anakan sakit.
+- Masalah utamanya adalah identitas genetik dan kejelasan garis keturunan.
+- Anakan dari persilangan tersebut dapat menjadi pembawa dua strain Albino yang berbeda.
+- Status genetik yang tidak tercatat dapat menimbulkan kesalahan pairing pada generasi berikutnya.
+
+**Rekomendasi breeding:** Pisahkan strain Tremper, Bell, dan Rainwater jika tujuan breeding adalah mempertahankan kemurnian dan identitas masing-masing garis keturunan. Catat asal-usul serta status genetik setiap indukan dengan jelas.
+
+---
+
+## 6. Inbreeding dan Keragaman Genetik
+
+Inbreeding adalah perkawinan antara individu yang memiliki hubungan kekerabatan dekat, misalnya saudara kandung atau induk dengan keturunannya.
+
+Praktik ini dapat meningkatkan kemungkinan alel yang sama diwariskan dari kedua induk sehingga meningkatkan tingkat *homozygosity*.
+
+**Risiko yang perlu diperhatikan:**
+- Alel resesif yang merugikan lebih berpeluang muncul dalam kondisi homozigot.
+- Keragaman genetik dapat menurun.
+- Dalam populasi atau garis keturunan tertentu, risiko penurunan kesehatan dan keberhasilan reproduksi dapat meningkat.
+
+Namun, tidak setiap persilangan kerabat pasti menghasilkan keturunan cacat. Risiko bergantung pada tingkat kekerabatan, variasi genetik, serta riwayat kesehatan garis keturunan.
+
+**Rekomendasi breeding:**
+- Hindari pengulangan persilangan kerabat dekat tanpa tujuan dan evaluasi genetik yang jelas.
+- Catat silsilah setiap individu.
+- Pertimbangkan penggunaan indukan yang tidak memiliki hubungan kekerabatan dekat.
+- Jangan menganggap outcross otomatis menjamin keturunan sehat; kesehatan indukan dan kualitas pengelolaan tetap penting.
+
+---
+
+## 7. Kesehatan Indukan dan Tanggung Jawab Reproduksi
+
+Breeding yang bertanggung jawab dimulai sebelum proses pairing dilakukan.
+
+Sebelum memasangkan gecko, periksa:
+- Kondisi tubuh dan berat badan indukan.
+- Nafsu makan dan aktivitas normal.
+- Kondisi nutrisi dan kecukupan kalsium.
+- Riwayat penyakit atau gangguan reproduksi.
+- Riwayat *egg binding* atau kesulitan bertelur pada betina.
+- Waktu pemulihan yang cukup setelah siklus bertelur.
+
+Jangan memaksakan pairing pada gecko yang sedang sakit, terlalu kurus, mengalami gangguan reproduksi, atau belum memiliki kondisi tubuh yang memadai.
+
+Jika terdapat masalah kesehatan yang belum jelas penyebabnya, konsultasikan dengan dokter hewan yang berpengalaman menangani reptil sebelum melakukan breeding.
+
+---
+
+## 8. Biosecurity dan Pencegahan Penyakit
+
+Kesehatan satu individu dapat memengaruhi seluruh koloni. Karena itu, breeder perlu menerapkan prosedur biosecurity.
+
+**Langkah penting:**
+- Karantina gecko baru sebelum digabungkan dengan koleksi utama.
+- Gunakan peralatan terpisah untuk hewan yang sakit atau sedang dikarantina.
+- Bersihkan dan disinfeksi peralatan secara tepat.
+- Pisahkan gecko yang menunjukkan gejala penyakit.
+- Catat riwayat penyakit, pengobatan, dan kematian.
+- Lakukan pemeriksaan dokter hewan jika ditemukan gejala yang mencurigakan.
+
+Salah satu penyakit yang perlu diwaspadai dalam pemeliharaan leopard gecko adalah **Cryptosporidiosis**, infeksi parasit yang dapat berdampak serius pada kesehatan dan penyebaran penyakit dalam koloni.
+
+---
+
+## 9. Etika Penjualan dan Tanggung Jawab terhadap Hatchling
+
+Tanggung jawab breeder tidak berhenti ketika telur menetas. Setiap hatchling harus dipastikan memiliki kondisi yang layak sebelum dijual atau dipindahkan ke pemilik baru.
+
+**Sebelum menjual gecko:**
+- Pastikan hatchling sudah makan dan menunjukkan perkembangan yang baik.
+- Jangan menjual gecko yang sakit atau memiliki kondisi kesehatan yang belum stabil.
+- Jelaskan morph dan status genetik berdasarkan informasi yang benar.
+- Jangan mengklaim gecko sebagai Het tanpa dasar silsilah atau hasil pembuktian yang memadai.
+- Sampaikan kondisi kesehatan atau kekurangan fisik secara jujur.
+- Pastikan calon pembeli memahami kebutuhan dasar pemeliharaan leopard gecko.
+
+Breeder bertanggung jawab memberikan informasi yang transparan, bukan hanya menjual hewan berdasarkan warna dan penampilannya.
+
+---
+
+## 10. Checklist Sebelum Melakukan Pairing
+
+Sebelum melakukan pairing, gunakan checklist berikut:
+- [ ] Kedua indukan dalam kondisi sehat dan memiliki *body condition* yang baik.
+- [ ] Tidak terdapat gangguan neurologis atau kelainan bawaan yang dicurigai bersifat genetik.
+- [ ] Tidak menggunakan Lemon Frost atau Super Lemon Frost untuk breeding.
+- [ ] Identitas strain Albino dan status genetik indukan telah diketahui.
+- [ ] Riwayat silsilah dan kekerabatan telah diperiksa.
+- [ ] Betina memiliki kondisi reproduksi dan nutrisi yang memadai.
+- [ ] Tersedia fasilitas inkubasi dan perawatan hatchling.
+- [ ] Tersedia rencana perawatan dan penempatan anakan setelah menetas.
+
+> **Ingat:** Pairing yang baik bukan hanya tentang kemungkinan menghasilkan morph yang menarik, tetapi juga tentang tanggung jawab terhadap kehidupan setiap anakan yang dihasilkan.`,
+    exampleTitle: 'Checklist Pemeriksaan Sebelum Pairing (Etika & Biosecurity)',
+    exampleContent: `1. Indukan sehat, berat optimal, dan bebas riwayat egg binding.
+2. Tidak membawa mutasi berisiko tinggi seperti Lemon Frost.
+3. Bebas gejala neurologis Enigma Syndrome.
+4. Identitas strain Albino terverifikasi (hindari campur strain).
+5. Fasilitas inkubasi, karantina, dan pakan anakan siap.`,
+    warningTitle: 'Prinsip Utama Etika Breeding',
+    warningContent: 'Kesehatan, kualitas hidup, dan kesejahteraan satwa harus selalu lebih diutamakan daripada sekadar mengejar penampilan, warna, atau keunikan morph.',
+    diagramImageUrl: '',
+    diagramCaption: 'Checklist Pemeriksaan Pra-Pairing & Protokol Biosecurity Leopard Gecko',
     summaryPoints: [
-      'Enigma membawa risiko bawaan gangguan saraf keseimbangan (Enigma Syndrome) yang tidak dapat dipisahkan dari gennya.',
-      'Lemon Frost berkaitan erat dengan pertumbuhan tumor iridophore ganas dan tidak direkomendasikan untuk dikembangbiakkan.',
-      'Pilih indukan White & Yellow (W&Y) hanya dari garis bersih dan jangan pernah digabungkan dengan Enigma.',
-      'Dilarang keras menyilangkan 3 strain Albino berbeda (Tremper, Bell, Rainwater).'
+      'Kesehatan dan kesejahteraan leopard gecko harus selalu diutamakan di atas warna atau keunikan morph.',
+      'Enigma berhubungan dengan gangguan neurologis (Enigma Syndrome); hindari membiakkan individu yang bergejala.',
+      'Lemon Frost memiliki risiko tumor sel pigmen ganas (iridophoroma) yang terdokumentasi ilmiah sehingga sangat tidak disarankan untuk dibiakkan.',
+      'White & Yellow (W&Y) berbeda dari Enigma dan bukti ilmiah sindrom khusus masih terbatas, namun evaluasi kesehatan garis keturunan tetap wajib.',
+      'Mencampur 3 strain Albino (Tremper, Bell, Rainwater) merusak identitas genetik dan menimbulkan kerancuan pencatatan silsilah.',
+      'Inbreeding berlebihan meningkatkan homozygosity dan risiko alel merugikan; catat silsilah dan kelola kekerabatan.',
+      'Breeder bertanggung jawab atas kesehatan indukan, biosecurity koloni, serta memastikan hatchling sehat sebelum dipindahtangankan.'
     ],
     quiz: [
       {
         id: 'q6a-1',
-        question: 'Mengapa mutasi "Lemon Frost" pada Leopard Gecko sangat dihindari dalam pembiakan modern?',
+        question: 'Apa risiko kesehatan utama yang telah dikaitkan dengan Lemon Frost?',
         options: [
-          'Karena warnanya memudar saat dewasa',
-          'Karena terikat secara genetik dengan risiko tinggi pertumbuhan tumor kulit (iridophoroma)',
-          'Karena tidak mau makan jangkrik',
-          'Karena hanya menghasilkan anakan jantan'
+          'Gangguan pencernaan',
+          'Iridophoroma atau tumor sel pigmen',
+          'Kelumpuhan kaki',
+          'Gangguan penglihatan'
         ],
         correctIndex: 1,
-        explanation: 'Mutasi Lemon Frost menyebabkan proliferasi sel pigmen abnormal yang memicu tumor pada sebagian besar individunya.'
+        explanation: 'Mutasi Lemon Frost berhubungan dengan peningkatan proliferasi sel pigmen iridophore yang dapat berkembang menjadi tumor ganas (iridophoroma).'
       },
       {
         id: 'q6a-2',
-        question: 'Apa alasan utama pelarangan mengawinkan Tremper Albino dengan Bell Albino?',
+        question: 'Apakah semua Enigma pasti menunjukkan gejala Enigma Syndrome?',
         options: [
-          'Telurnya pasti gagal menetas',
-          'Menghasilkan anakan dengan campuran strain albino tersembunyi yang mengacaukan kemurnian silsilah genetik',
-          'Anakannya berubah menjadi AFT',
-          'Induknya menjadi agresif'
+          'Ya, seluruhnya pasti mengalami gejala berat',
+          'Tidak, gejala dapat bervariasi dan mekanisme pewarisannya belum sepenuhnya dipahami',
+          'Hanya Enigma betina yang mengalami gejala',
+          'Hanya Super Enigma yang mengalami gejala'
         ],
         correctIndex: 1,
-        explanation: 'Ketiga strain albino berada di lokus berbeda; mencampurnya menghasilkan keturunan berstatus het ganda tidak jelas yang merugikan peternak berikutnya.'
+        explanation: 'Gejala Enigma Syndrome dapat bervariasi antarindividu dan mekanisme pewarisan serta faktor pemicu keparahannya belum dipahami sepenuhnya.'
+      },
+      {
+        id: 'q6a-3',
+        question: 'Apa masalah utama dari persilangan Tremper Albino dengan Bell Albino?',
+        options: [
+          'Seluruh anakan pasti sakit',
+          'Menghasilkan Albino visual 100%',
+          'Dapat menghasilkan anakan normal visual dengan alel dari kedua strain sehingga identitas genetik perlu dicatat',
+          'Menghilangkan seluruh gen Albino'
+        ],
+        correctIndex: 2,
+        explanation: 'Karena kedua strain non-complementary, anakan berpenampilan normal namun membawa alel ganda (Double Het), mengaburkan catatan kemurnian silsilah generasi berikutnya.'
+      },
+      {
+        id: 'q6a-4',
+        question: 'Apa salah satu risiko utama inbreeding berulang?',
+        options: [
+          'Selalu menghasilkan morph baru',
+          'Meningkatkan homozygosity dan kemungkinan munculnya alel resesif merugikan',
+          'Menjamin keturunan lebih sehat',
+          'Menghilangkan seluruh mutasi genetik'
+        ],
+        correctIndex: 1,
+        explanation: 'Perkawinan kerabat dekat berulang meningkatkan kemungkinan alel resesif cacat bertemu dalam kondisi homozigot serta menurunkan keragaman genetik.'
+      },
+      {
+        id: 'q6a-5',
+        question: 'Apa yang sebaiknya dilakukan jika seekor gecko menunjukkan gangguan neurologis?',
+        options: [
+          'Tetap digunakan untuk breeding jika morph-nya langka',
+          'Dikawinkan dengan morph lain',
+          'Diprioritaskan untuk pemeriksaan dokter hewan dan tidak digunakan sebagai indukan',
+          'Dijual tanpa informasi tambahan'
+        ],
+        correctIndex: 2,
+        explanation: 'Prinsip etika breeding mewajibkan pemeriksaan dokter hewan reptil dan tidak menggunakan hewan yang menunjukkan gangguan neurologis sebagai indukan reproduksi.'
       }
     ]
   },
@@ -3697,6 +4295,32 @@ export async function seedStarterGuidesToFirestore(): Promise<{ createdCount: nu
     const normalizedSlug = item.slug.trim().toLowerCase();
 
     if (existingIds.has(docId) || existingSlugs.has(normalizedSlug)) {
+      if (docId === 'guide-01-dasar-genetika' || docId === 'guide-03a-mengenal-morph-lg' || docId === 'guide-04-dasar-pairing' || docId === 'guide-06a-genetic-warning-lg') {
+        const metaRef = doc(db, 'genetics_guides', docId);
+        const bodyRef = doc(db, 'genetics_guide_contents', docId);
+        batch.set(metaRef, {
+          title: item.title,
+          subtitle: item.subtitle || '',
+          readTimeMinutes: item.readTimeMinutes || 7,
+          coverImageUrl: item.coverImageUrl || '',
+          imageCaption: item.imageCaption || '',
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        batch.set(bodyRef, {
+          guideId: docId,
+          content: item.content,
+          exampleTitle: item.exampleTitle || '',
+          exampleContent: item.exampleContent || '',
+          warningTitle: item.warningTitle || '',
+          warningContent: item.warningContent || '',
+          diagramImageUrl: item.diagramImageUrl || '',
+          diagramCaption: item.diagramCaption || '',
+          summaryPoints: item.summaryPoints || [],
+          quiz: item.quiz || [],
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        createdCount++;
+      }
       skippedCount++;
       continue;
     }

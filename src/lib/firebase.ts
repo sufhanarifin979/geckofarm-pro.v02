@@ -113,7 +113,7 @@ export const setCachedGuides = (data: any[], adminView = false) => {
     guidesPublishedCache = data;
   }
   try {
-    localStorage.setItem(adminView ? 'cache_genetics_guides_admin' : 'cache_genetics_guides_pub_v11', JSON.stringify(data));
+    localStorage.setItem(adminView ? 'cache_genetics_guides_admin' : 'cache_genetics_guides_pub_v15', JSON.stringify(data));
   } catch (e) {}
 };
 export const getCachedGuideBody = (guideId: string) => guideBodiesCache[guideId] || null;
@@ -129,6 +129,10 @@ export const clearCachedGuides = (guideId?: string) => {
     guideBodiesCache = {};
   }
   try {
+    localStorage.removeItem('cache_genetics_guides_pub_v15');
+    localStorage.removeItem('cache_genetics_guides_pub_v14');
+    localStorage.removeItem('cache_genetics_guides_pub_v13');
+    localStorage.removeItem('cache_genetics_guides_pub_v12');
     localStorage.removeItem('cache_genetics_guides_pub_v11');
     localStorage.removeItem('cache_genetics_guides_pub_v10');
     localStorage.removeItem('cache_genetics_guides_pub_v9');

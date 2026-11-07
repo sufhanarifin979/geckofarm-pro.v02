@@ -5,7 +5,8 @@ import {
   where,
   getDocs,
   getDoc,
-  doc
+  doc,
+  setDoc
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   db,
   getCachedGuides,
@@ -179,7 +181,7 @@ export default function GeneticsGuide({
       }
 
       try {
-        const localRaw = localStorage.getItem('cache_genetics_guides_pub_v11');
+        const localRaw = localStorage.getItem('cache_genetics_guides_pub_v15');
         if (localRaw) {
           const parsed = JSON.parse(localRaw);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -424,6 +426,127 @@ export default function GeneticsGuide({
       const bodySnap = await getDoc(doc(db, 'genetics_guide_contents', meta.id));
       if (bodySnap.exists()) {
         const body = bodySnap.data() as GeneticsGuideBody;
+        if (meta.id === 'guide-01-dasar-genetika') {
+          const starter = STARTER_GENETICS_GUIDES.find(s => s.id === meta.id);
+          if (starter && (!body.content || !body.content.includes('Penting untuk diingat bahwa tidak semua karakteristik gecko'))) {
+            body.content = starter.content;
+            body.exampleTitle = starter.exampleTitle;
+            body.exampleContent = starter.exampleContent;
+            body.warningTitle = starter.warningTitle;
+            body.warningContent = starter.warningContent;
+            body.summaryPoints = starter.summaryPoints;
+            body.quiz = starter.quiz;
+            if (profile?.email === 'sufhan.arifin979@gmail.com') {
+              try {
+                await setDoc(doc(db, 'genetics_guide_contents', meta.id), {
+                  content: starter.content,
+                  exampleTitle: starter.exampleTitle,
+                  exampleContent: starter.exampleContent,
+                  warningTitle: starter.warningTitle,
+                  warningContent: starter.warningContent,
+                  summaryPoints: starter.summaryPoints,
+                  quiz: starter.quiz
+                }, { merge: true });
+                await setDoc(doc(db, 'genetics_guides', meta.id), {
+                  subtitle: starter.subtitle
+                }, { merge: true });
+              } catch (e) {}
+            }
+          }
+        }
+        if (meta.id === 'guide-03a-mengenal-morph-lg') {
+          const starter = STARTER_GENETICS_GUIDES.find(s => s.id === meta.id);
+          if (starter && (!body.content || !body.content.includes('non-complementary'))) {
+            body.content = starter.content;
+            body.exampleTitle = starter.exampleTitle;
+            body.exampleContent = starter.exampleContent;
+            body.warningTitle = starter.warningTitle;
+            body.warningContent = starter.warningContent;
+            body.summaryPoints = starter.summaryPoints;
+            body.quiz = starter.quiz;
+            if (profile?.email === 'sufhan.arifin979@gmail.com') {
+              try {
+                await setDoc(doc(db, 'genetics_guide_contents', meta.id), {
+                  content: starter.content,
+                  exampleTitle: starter.exampleTitle,
+                  exampleContent: starter.exampleContent,
+                  warningTitle: starter.warningTitle,
+                  warningContent: starter.warningContent,
+                  summaryPoints: starter.summaryPoints,
+                  quiz: starter.quiz
+                }, { merge: true });
+                await setDoc(doc(db, 'genetics_guides', meta.id), {
+                  subtitle: starter.subtitle,
+                  readTimeMinutes: starter.readTimeMinutes || 7
+                }, { merge: true });
+              } catch (e) {}
+            }
+          }
+        }
+        if (meta.id === 'guide-04-dasar-pairing') {
+          const starter = STARTER_GENETICS_GUIDES.find(s => s.id === meta.id);
+          if (starter && (!body.content || !body.content.includes('Mengapa Disebut 66% Possible Het?'))) {
+            body.content = starter.content;
+            body.exampleTitle = starter.exampleTitle;
+            body.exampleContent = starter.exampleContent;
+            body.warningTitle = starter.warningTitle;
+            body.warningContent = starter.warningContent;
+            body.summaryPoints = starter.summaryPoints;
+            body.quiz = starter.quiz;
+            if (profile?.email === 'sufhan.arifin979@gmail.com') {
+              try {
+                await setDoc(doc(db, 'genetics_guide_contents', meta.id), {
+                  content: starter.content,
+                  exampleTitle: starter.exampleTitle,
+                  exampleContent: starter.exampleContent,
+                  warningTitle: starter.warningTitle,
+                  warningContent: starter.warningContent,
+                  summaryPoints: starter.summaryPoints,
+                  quiz: starter.quiz
+                }, { merge: true });
+                await setDoc(doc(db, 'genetics_guides', meta.id), {
+                  subtitle: starter.subtitle,
+                  readTimeMinutes: starter.readTimeMinutes || 7
+                }, { merge: true });
+              } catch (e) {}
+            }
+          }
+        }
+        if (meta.id === 'guide-06a-genetic-warning-lg') {
+          const starter = STARTER_GENETICS_GUIDES.find(s => s.id === meta.id);
+          if (starter && (!body.content || !body.content.includes('Checklist Sebelum Melakukan Pairing') || (body.quiz && body.quiz.length < 5))) {
+            body.content = starter.content;
+            body.exampleTitle = starter.exampleTitle;
+            body.exampleContent = starter.exampleContent;
+            body.warningTitle = starter.warningTitle;
+            body.warningContent = starter.warningContent;
+            body.diagramImageUrl = starter.diagramImageUrl || '';
+            body.diagramCaption = starter.diagramCaption || '';
+            body.summaryPoints = starter.summaryPoints;
+            body.quiz = starter.quiz;
+            if (profile?.email === 'sufhan.arifin979@gmail.com') {
+              try {
+                await setDoc(doc(db, 'genetics_guide_contents', meta.id), {
+                  content: starter.content,
+                  exampleTitle: starter.exampleTitle,
+                  exampleContent: starter.exampleContent,
+                  warningTitle: starter.warningTitle,
+                  warningContent: starter.warningContent,
+                  diagramImageUrl: starter.diagramImageUrl || '',
+                  diagramCaption: starter.diagramCaption || '',
+                  summaryPoints: starter.summaryPoints,
+                  quiz: starter.quiz
+                }, { merge: true });
+                await setDoc(doc(db, 'genetics_guides', meta.id), {
+                  subtitle: starter.subtitle,
+                  readTimeMinutes: starter.readTimeMinutes || 8,
+                  coverImageUrl: starter.coverImageUrl || '',
+                  imageCaption: starter.imageCaption || ''
+                }, { merge: true });
+              } catch (e) {}
+            }
+          }
+        }
         setCachedGuideBody(meta.id, body);
         setSelectedGuideBody(body);
       } else {
@@ -439,6 +562,8 @@ export default function GeneticsGuide({
             exampleContent: starter.exampleContent,
             warningTitle: starter.warningTitle,
             warningContent: starter.warningContent,
+            diagramImageUrl: starter.diagramImageUrl || '',
+            diagramCaption: starter.diagramCaption || '',
             summaryPoints: starter.summaryPoints,
             quiz: starter.quiz,
             glossaryTerms: starter.glossaryTerms
@@ -779,9 +904,12 @@ export default function GeneticsGuide({
                   [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5
                   [&_strong]:font-black [&_strong]:text-slate-900
                   [&_blockquote]:border-l-4 [&_blockquote]:border-emerald-500 [&_blockquote]:bg-emerald-50/60 [&_blockquote]:p-4 [&_blockquote]:rounded-r-2xl [&_blockquote]:text-xs sm:[&_blockquote]:text-sm [&_blockquote]:font-semibold [&_blockquote]:text-emerald-950
-                  [&_hr]:border-slate-100 [&_hr]:my-6"
+                  [&_hr]:border-slate-100 [&_hr]:my-6
+                  [&_table]:w-full [&_table]:my-4 [&_table]:border-collapse [&_table]:overflow-x-auto [&_table]:block sm:[&_table]:table
+                  [&_th]:bg-slate-100 [&_th]:p-3 [&_th]:text-xs [&_th]:font-bold [&_th]:text-slate-800 [&_th]:border [&_th]:border-slate-200 [&_th]:text-left
+                  [&_td]:p-3 [&_td]:text-xs sm:[&_td]:text-sm [&_td]:border [&_td]:border-slate-200 [&_td]:text-slate-700"
               >
-                <ReactMarkdown>{selectedGuideBody?.content || ''}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedGuideBody?.content || ''}</ReactMarkdown>
               </div>
 
               {/* Optional Diagram Inside Lesson */}
