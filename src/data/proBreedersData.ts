@@ -1,4 +1,7 @@
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { ProBreeder, UserProfile } from '../types';
+import { getSubscriptionExpiryDate } from '../lib/subscriptionUtils';
 
 // Authentic community-inspired logos encoded as clean, high-resolution SVG data URLs
 const createSvgLogo = (bg: string, content: string): string => {
@@ -169,18 +172,68 @@ export const STARTER_PRO_BREEDERS: ProBreeder[] = [
   }
 ];
 
-/**
- * Merges starter pro breeders with current user if they are Premium
- */
-export function getProBreedersList(currentProfile?: UserProfile | null): ProBreeder[] {
-  const list = [...STARTER_PRO_BREEDERS];
+let cachedLiveBreeders: ProBreeder[] | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL_MS = 30 * 1000; // 30s cache
 
+/**
+ * Fetches all active Premium breeders dynamically and live from Firestore `users` collection.
+ */
+export async function fetchLiveProBreeders(currentProfile?: UserProfile | null): Promise<ProBreeder[]> {
+  const now = Date.now();
+  if (cachedLiveBreeders && now - lastFetchTime < CACHE_TTL_MS) {
+    return mergeWithCurrentProfile(cachedLiveBreeders, currentProfile);
+  }
+
+  try {
+    const q = query(
+      collection(db, 'users'),
+      where('subscription', '==', 'premium')
+    );
+    const snap = await getDocs(q);
+    const result: ProBreeder[] = [];
+
+    snap.docs.forEach(docSnap => {
+      const data = docSnap.data() as UserProfile;
+      const farmName = (data.farmName || '').trim();
+      if (!farmName) return;
+
+      // Validate subscription status & expiry date
+      if (data.premiumExpiresAt) {
+        const exp = getSubscriptionExpiryDate(data);
+        if (exp && exp.getTime() <= now) {
+          return; // Expired
+        }
+      }
+
+      result.push({
+        id: docSnap.id,
+        farmName,
+        farmPhotoUrl: data.farmPhotoUrl || '',
+        isVerified: true
+      });
+    });
+
+    cachedLiveBreeders = result;
+    lastFetchTime = now;
+    return mergeWithCurrentProfile(result, currentProfile);
+  } catch (error) {
+    console.warn('Gagal memuat user premium live dari Firestore:', error);
+    if (cachedLiveBreeders && cachedLiveBreeders.length > 0) {
+      return mergeWithCurrentProfile(cachedLiveBreeders, currentProfile);
+    }
+    return mergeWithCurrentProfile([], currentProfile);
+  }
+}
+
+function mergeWithCurrentProfile(list: ProBreeder[], currentProfile?: UserProfile | null): ProBreeder[] {
+  const merged = [...list];
   if (currentProfile && currentProfile.subscription === 'premium' && currentProfile.farmName?.trim()) {
-    const exists = list.some(
-      b => b.farmName.toLowerCase().trim() === currentProfile.farmName.toLowerCase().trim()
+    const exists = merged.some(
+      b => b.id === currentProfile.uid || b.farmName.toLowerCase().trim() === currentProfile.farmName.toLowerCase().trim()
     );
     if (!exists) {
-      list.unshift({
+      merged.unshift({
         id: currentProfile.uid || 'current-user-pro',
         farmName: currentProfile.farmName.trim(),
         farmPhotoUrl: currentProfile.farmPhotoUrl || '',
@@ -188,6 +241,9 @@ export function getProBreedersList(currentProfile?: UserProfile | null): ProBree
       });
     }
   }
+  return merged;
+}
 
-  return list;
+export function getProBreedersList(currentProfile?: UserProfile | null): ProBreeder[] {
+  return mergeWithCurrentProfile(cachedLiveBreeders || [], currentProfile);
 }

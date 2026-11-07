@@ -20,7 +20,7 @@ import PremiumModal from './PremiumModal';
 import Analytics from './Analytics';
 import AllProBreedersModal from './AllProBreedersModal';
 import { ProBreeder } from '../types';
-import { getProBreedersList } from '../data/proBreedersData';
+import { fetchLiveProBreeders } from '../data/proBreedersData';
 
 import { useGeckos } from '../GeckoProvider';
 import { useNotifications } from '../context/NotificationContext';
@@ -42,14 +42,26 @@ export default function Dashboard({ profile }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [isProBreedersModalOpen, setIsProBreedersModalOpen] = useState(false);
+  const [allProBreeders, setAllProBreeders] = useState<ProBreeder[]>([]);
   const [shuffledBreeders, setShuffledBreeders] = useState<ProBreeder[]>([]);
-
-  const allProBreeders = useMemo(() => getProBreedersList(profile), [profile]);
+  const [loadingBreeders, setLoadingBreeders] = useState(true);
 
   useEffect(() => {
-    const list = getProBreedersList(profile);
-    const shuffled = [...list].sort(() => 0.5 - Math.random());
-    setShuffledBreeders(shuffled);
+    let isMounted = true;
+    async function loadBreeders() {
+      setLoadingBreeders(true);
+      const list = await fetchLiveProBreeders(profile);
+      if (isMounted) {
+        setAllProBreeders(list);
+        const shuffled = [...list].sort(() => 0.5 - Math.random());
+        setShuffledBreeders(shuffled);
+        setLoadingBreeders(false);
+      }
+    }
+    loadBreeders();
+    return () => {
+      isMounted = false;
+    };
   }, [profile]);
 
   useEffect(() => {
@@ -332,51 +344,67 @@ export default function Dashboard({ profile }: DashboardProps) {
               Breeder aktif terverifikasi saat ini, Setiap dukungan memiliki peran dalam ekosistem GeckoFarm Pro.
             </p>
 
-            {/* Grid of 10 Large Circular Logos (2 rows of 5) */}
-            <div className="grid grid-cols-5 gap-3 sm:gap-5 max-w-md mx-auto justify-items-center">
-              {shuffledBreeders.slice(0, 10).map((b, idx) => (
-                <div
-                  key={b.id || idx}
-                  onClick={() => setIsProBreedersModalOpen(true)}
-                  className="group flex flex-col items-center cursor-pointer"
-                  title={b.farmName}
-                >
-                  <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full overflow-hidden shadow-sm hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-slate-100/90 bg-white flex items-center justify-center p-0.5">
-                    {b.farmPhotoUrl ? (
-                      <img
-                        src={b.farmPhotoUrl}
-                        alt={b.farmName}
-                        className="w-full h-full object-cover rounded-full"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent) {
-                            parent.innerHTML = `<span class="font-black text-emerald-800 text-sm uppercase">${b.farmName.substring(0, 2)}</span>`;
-                          }
-                        }}
-                      />
-                    ) : (
-                      <span className="font-black text-emerald-800 text-sm uppercase">
-                        {b.farmName.substring(0, 2)}
-                      </span>
-                    )}
+            {/* Grid of Circular Logos */}
+            {loadingBreeders ? (
+              <div className="flex justify-center gap-3 sm:gap-4 max-w-md mx-auto py-3">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="w-13 h-13 sm:w-16 sm:h-16 rounded-full bg-slate-100 animate-pulse border-2 border-slate-200/50" />
+                ))}
+              </div>
+            ) : shuffledBreeders.length === 0 ? (
+              <div className="py-6 px-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/80 max-w-sm mx-auto text-center">
+                <Crown className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-700">Belum ada Breeder Pro aktif lainnya</p>
+                <p className="text-[11px] text-slate-500 mt-1">Upgrade akun ke Pro untuk menampilkan logo farm Anda di sini!</p>
+              </div>
+            ) : (
+              <div className={`gap-3 sm:gap-5 max-w-md mx-auto justify-items-center ${shuffledBreeders.length < 5 ? 'flex flex-wrap justify-center' : 'grid grid-cols-5'}`}>
+                {shuffledBreeders.slice(0, 10).map((b, idx) => (
+                  <div
+                    key={b.id || idx}
+                    onClick={() => setIsProBreedersModalOpen(true)}
+                    className="group flex flex-col items-center cursor-pointer"
+                    title={b.farmName}
+                  >
+                    <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full overflow-hidden shadow-sm hover:shadow-md hover:scale-110 active:scale-95 transition-all duration-300 border-2 border-slate-100/90 bg-white flex items-center justify-center p-0.5">
+                      {b.farmPhotoUrl ? (
+                        <img
+                          src={b.farmPhotoUrl}
+                          alt={b.farmName}
+                          className="w-full h-full object-cover rounded-full"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<span class="font-black text-emerald-800 text-sm uppercase">${b.farmName.substring(0, 2)}</span>`;
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="font-black text-emerald-800 text-sm uppercase">
+                          {b.farmName.substring(0, 2)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Outlined Pill Button (Matching Faunary style) */}
-            <div className="mt-8 flex justify-center">
-              <button
-                onClick={() => setIsProBreedersModalOpen(true)}
-                className="px-8 py-2.5 rounded-full border-2 border-emerald-700/80 hover:bg-emerald-50 active:scale-95 text-emerald-800 text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center gap-2"
-              >
-                <span>Lihat user pro lainnya</span>
-                <span className="text-sm">→</span>
-              </button>
-            </div>
+            {shuffledBreeders.length > 0 && (
+              <div className="mt-8 flex justify-center">
+                <button
+                  onClick={() => setIsProBreedersModalOpen(true)}
+                  className="px-8 py-2.5 rounded-full border-2 border-emerald-700/80 hover:bg-emerald-50 active:scale-95 text-emerald-800 text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center gap-2"
+                >
+                  <span>Lihat semua breeder pro ({allProBreeders.length})</span>
+                  <span className="text-sm">→</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* SCALE YOUR BUSINESS BANNER */}
